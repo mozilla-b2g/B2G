@@ -1,5 +1,7 @@
 #!/bin/bash
 
+export SETUP_SH_SOURCED=y
+
 . .config
 if [ $? -ne 0 ]; then
 	echo Could not load .config. Did you run config.sh?
