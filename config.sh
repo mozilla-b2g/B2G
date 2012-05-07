@@ -60,6 +60,13 @@ case "$1" in
 
 "emulator")
 	echo DEVICE=generic > .config &&
+	echo LUNCH=generic-eng >> .config &&
+	repo_sync master
+	;;
+
+"emulator-x86")
+	echo DEVICE=generic > .config &&
+	echo LUNCH=generic_x86-eng >> .config &&
 	repo_sync master
 	;;
 
@@ -71,6 +78,7 @@ case "$1" in
 	echo - galaxy-nexus
 	echo - nexus-s
 	echo - emulator
+	echo - emulator-x86
 	exit -1
 	;;
 esac
