@@ -102,3 +102,17 @@ To restart B2G and run B2G under gdb:
 To attach gdb to a running B2G process:
 
     ./run-gdb.sh attach
+
+## Running emulator tests
+
+Having built the emulator, you can run the Marionette test suite:
+
+    ./test.sh
+
+You can also specify any number of individual tests (indiviual files, directories, or ini files):
+
+    ./test.sh gecko/dom/sms gecko/dom/battery/test/marionette/test_battery.py
+
+or if you're using a different Gecko checkout:
+
+    ./test.sh /path/to/mozilla-central/dom/battery/test/marionette/test_battery.py
