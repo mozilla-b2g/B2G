@@ -6,6 +6,11 @@
 B2G_HOME=`dirname $0`
 pushd $B2G_HOME && B2G_HOME=$PWD && popd
 
+# Use default Gecko location if it's not provided in .config.
+if [ -z $GECKO_PATH ]; then
+  GECKO_PATH=gecko
+fi
+
 # Run standard set of tests by default. Command line arguments can be
 # specified to run specific tests (an individual test file, a directory,
 # or an .ini file).
@@ -15,5 +20,5 @@ if [ "$#" -gt 0 ]; then
 fi
 echo "Running tests from $TEST_PATH"
 
-cd $GECKO_PATH/testing/marionette/client/marionette &&
-sh venv_test.sh `which python` --emulator --homedir=$B2G_HOME --type=b2g $TEST_PATH
+SCRIPT=$GECKO_PATH/testing/marionette/client/marionette/venv_test.sh
+sh $SCRIPT `which python` --emulator --homedir=$B2G_HOME --type=b2g $TEST_PATH
