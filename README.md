@@ -54,6 +54,13 @@ And then run config.sh for the device you want to build for:
 
     ./config.sh [device name]
 
+### Building against a custom Gecko
+
+It can sometimes be useful to build against a different Gecko than the one specified in the manifest, e.g. a mozilla-central checkout that has some patches applied. To do so, edit .config:
+
+    GECKO_PATH=/path/to/mozilla-central
+    GECKO_OBJDIR=/path/to/mozilla-central/objdir-gonk
+
 ## Build
 
 Run build.sh or bld.sh to build B2G.
