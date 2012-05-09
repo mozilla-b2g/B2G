@@ -116,3 +116,10 @@ You can also specify any number of individual tests (indiviual files, directorie
 or if you're using a different Gecko checkout:
 
     ./test.sh /path/to/mozilla-central/dom/battery/test/marionette/test_battery.py
+
+## Updating
+
+To update your checkouts, pull the latest changes for the top-level repository and use the repo tool to update the submodules:
+
+  git pull
+  ./repo sync
