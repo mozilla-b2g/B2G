@@ -22,7 +22,7 @@ if [ "$DEVICE" = "generic_x86" ]; then
 else
     EMULATOR=$TOOLS_PATH/emulator
     KERNEL=$B2G_HOME/prebuilts/qemu-kernel/arm/kernel-qemu-armv7
-    TAIL_ARGS="$TAIL_ARGS -cpu 'cortex-a8'"
+    TAIL_ARGS="$TAIL_ARGS -cpu cortex-a8"
 fi
 
 export PATH=$PATH:$TOOLS_PATH
