@@ -21,4 +21,4 @@ fi
 echo "Running tests from $TEST_PATH"
 
 SCRIPT=$GECKO_PATH/testing/marionette/client/marionette/venv_test.sh
-sh $SCRIPT `which python` --emulator --homedir=$B2G_HOME --type=b2g $TEST_PATH
+bash $SCRIPT `which python` --emulator --homedir=$B2G_HOME --type=b2g $TEST_PATH
