@@ -121,5 +121,5 @@ or if you're using a different Gecko checkout:
 
 To update your checkouts, pull the latest changes for the top-level repository and use the repo tool to update the submodules:
 
-  git pull
-  ./repo sync
+    git pull
+    ./repo sync
