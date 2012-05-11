@@ -20,5 +20,11 @@ if [ "$#" -gt 0 ]; then
 fi
 echo "Running tests from $TEST_PATH"
 
+if [ "$DEVICE" = "generic_x86" ]; then
+  ARCH=x86
+else
+  ARCH=arm
+fi
+
 SCRIPT=$GECKO_PATH/testing/marionette/client/marionette/venv_test.sh
-bash $SCRIPT `which python` --emulator --homedir=$B2G_HOME --type=b2g $TEST_PATH
+bash $SCRIPT `which python` --emulator=$ARCH --homedir=$B2G_HOME --type=b2g $TEST_PATH
