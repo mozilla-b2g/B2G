@@ -44,7 +44,7 @@ and talk to us on IRC:
   * ccache
   * autoconf-2.13 - brew install https://raw.github.com/Homebrew/homebrew-versions/master/autoconf213.rb
 
-## Configuration
+## Configure
 
 Run config.sh to get a list of supported devices:
 
@@ -93,6 +93,17 @@ To update gaia:
 
     ./flash.sh gaia
 
+## Update Repos
+
+To update all repos:
+
+    git pull
+    ./repo sync
+
+To update a specific repo (eg, gaia):
+
+    ./repo sync gaia
+
 ## Debug
 
 To restart B2G and run B2G under gdb:
@@ -103,23 +114,16 @@ To attach gdb to a running B2G process:
 
     ./run-gdb.sh attach
 
-## Running emulator tests
+## Test
 
-Having built the emulator, you can run the Marionette test suite:
+To run the Marionette test suite on the emulator:
 
     ./test.sh
 
-You can also specify any number of individual tests (indiviual files, directories, or ini files):
+To run specific tests (individual files, directories, or ini files):
 
     ./test.sh gecko/dom/sms gecko/dom/battery/test/marionette/test_battery.py
 
-or if you're using a different Gecko checkout:
+Specify the full path if you're using a different Gecko repo:
 
     ./test.sh /path/to/mozilla-central/dom/battery/test/marionette/test_battery.py
-
-## Updating
-
-To update your checkouts, pull the latest changes for the top-level repository and use the repo tool to update the submodules:
-
-    git pull
-    ./repo sync
