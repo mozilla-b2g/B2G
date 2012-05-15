@@ -15,7 +15,7 @@ install_blobs() {
 
 repo_sync() {
 	rm -rf .repo/manifest* &&
-	$REPO init -u git://github.com/mozilla-b2g/b2g-manifest -b $1 &&
+	$REPO init -u $1 -b $2 &&
 	$REPO sync
 }
 
@@ -31,23 +31,43 @@ case `uname` in
 	exit -1
 esac
 
+if [ -n "$2" ]; then
+  GITREPO=$2
+else
+  GITREPO="git://github.com/mozilla-b2g/b2g-manifest"
+fi
+echo $GITREPO
+
+if [ -n "$3" ]; then
+  GITBRANCH=$3
+fi
+
 case "$1" in
 "galaxy-s2")
+	if [ ! -n "$GITBRANCH" ]; then
+	  GITBRANCH="galaxy-s2"
+	fi
 	echo DEVICE=galaxys2 > .config &&
-	repo_sync galaxy-s2 &&
+	repo_sync $GITREPO $GITBRANCH &&
 	(cd device/samsung/galaxys2 && ./extract-files.sh)
 	;;
 
 "galaxy-nexus")
+	if [ ! -n "$GITBRANCH" ]; then
+	  GITBRANCH="maguro"
+	fi
 	MAGURO_BLOBS="broadcom-maguro-imm76d-4ee51a8d.tgz
                       imgtec-maguro-imm76d-0f59ea74.tgz
                       samsung-maguro-imm76d-d16591cf.tgz"
 	echo DEVICE=maguro > .config &&
 	install_blobs galaxy-nexus "$MAGURO_BLOBS" &&
-	repo_sync maguro
+	repo_sync $GITREPO $GITBRANCH
 	;;
 
 "nexus-s")
+	if [ ! -n "$GITBRANCH" ]; then
+	  GITBRANCH="crespo"
+	fi
 	CRESPO_BLOBS="akm-crespo-imm76d-8314bd5a.tgz
 		      broadcom-crespo-imm76d-a794e660.tgz
 		      imgtec-crespo-imm76d-d381b3bf.tgz
@@ -55,19 +75,25 @@ case "$1" in
 		      samsung-crespo-imm76d-d2d82200.tgz"
 	echo DEVICE=crespo > .config &&
 	install_blobs nexus-s "$CRESPO_BLOBS" &&
-	repo_sync crespo
+	repo_sync $GITREPO $GITBRANCH
 	;;
 
 "emulator")
+	if [ ! -n "$GITBRANCH" ]; then
+	  GITBRANCH="master"
+	fi
 	echo DEVICE=generic > .config &&
 	echo LUNCH=generic-eng >> .config &&
-	repo_sync master
+	repo_sync $GITREPO $GITBRANCH
 	;;
 
 "emulator-x86")
+	if [ ! -n "$GITBRANCH" ]; then
+	  GITBRANCH="master"
+	fi
 	echo DEVICE=generic > .config &&
 	echo LUNCH=full_x86-eng >> .config &&
-	repo_sync master
+	repo_sync $GITREPO $GITBRANCH
 	;;
 
 *)
