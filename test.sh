@@ -3,12 +3,11 @@
 . setup.sh
 
 # Determine the absolute path of our location.
-B2G_HOME=`dirname $0`
-pushd $B2G_HOME && B2G_HOME=$PWD && popd
+B2G_HOME=$(cd `dirname $0`; pwd)
 
 # Use default Gecko location if it's not provided in .config.
 if [ -z $GECKO_PATH ]; then
-  GECKO_PATH=gecko
+  GECKO_PATH=$B2G_HOME/gecko
 fi
 
 # Run standard set of tests by default. Command line arguments can be
