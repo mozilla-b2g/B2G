@@ -65,7 +65,7 @@ case "$1" in
 	;;
 
 "emulator-x86")
-	echo DEVICE=generic > .config &&
+	echo DEVICE=generic_x86 > .config &&
 	echo LUNCH=full_x86-eng >> .config &&
 	repo_sync master
 	;;
