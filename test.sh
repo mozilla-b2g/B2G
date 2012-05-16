@@ -26,4 +26,4 @@ else
 fi
 
 SCRIPT=$GECKO_PATH/testing/marionette/client/marionette/venv_test.sh
-bash $SCRIPT `which python` --emulator=$ARCH --homedir=$B2G_HOME --type=b2g $TEST_PATH
+bash $SCRIPT `which python` --emulator=$ARCH --homedir=$B2G_HOME --type=b2g $MARIONETTE_FLAGS $TEST_PATH
