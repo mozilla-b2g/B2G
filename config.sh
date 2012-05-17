@@ -36,7 +36,6 @@ if [ -n "$2" ]; then
 else
   GITREPO="git://github.com/mozilla-b2g/b2g-manifest"
 fi
-echo $GITREPO
 
 if [ -n "$3" ]; then
   GITBRANCH=$3
