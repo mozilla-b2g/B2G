@@ -1,7 +1,7 @@
 #!/bin/bash
 B2G_HOME=$PWD
 
-. .config
+. load-config.sh
 
 DEVICE=${DEVICE:-generic}
 

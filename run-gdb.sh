@@ -1,10 +1,6 @@
 #!/bin/bash
 
-. .config
-if [ $? -ne 0 ]; then
-	echo Could not load .config. Did you run config.sh?
-	exit -1
-fi
+. load-config.sh
 
 ADB=adb
 GDB_PORT=22576
