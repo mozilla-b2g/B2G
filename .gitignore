@@ -1,6 +1,7 @@
 .config
 .repo/
 .userconfig
+*.swp
 Makefile
 abi/
 bionic/
@@ -9,6 +10,8 @@ build/
 dalvik/
 development/
 device/
+download-galaxy-nexus/
+download-nexus-s/
 external/
 frameworks/
 gaia/
@@ -17,9 +20,11 @@ gonk-misc/
 hardware/
 libcore/
 ndk/
+objdir-gecko/
 out/
 prebuilt/
 prebuilts/
 rilproxy/
 sdk/
 system/
+vendor/

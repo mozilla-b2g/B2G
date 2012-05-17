@@ -31,6 +31,7 @@ and talk to us on IRC:
 * gcc/g++
 * bison
 * 32bit ncurses
+* 32bit zlib
 * make
 
 ### OSX
