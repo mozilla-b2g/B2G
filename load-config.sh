@@ -9,5 +9,5 @@ if [ $? -ne 0 ]; then
 fi
 
 if [ -f "$B2G_DIR/.userconfig" ]; then
-    . "$B2G_DIR/.userconfig"
+	. "$B2G_DIR/.userconfig"
 fi
