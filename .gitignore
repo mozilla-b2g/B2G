@@ -1,5 +1,6 @@
 .config
 .repo/
+.userconfig
 Makefile
 abi/
 bionic/
