@@ -53,17 +53,21 @@ flash_fastboot()
 		update_time
 		;;
 	esac
+	echo -ne \\a
 }
 
 flash_heimdall()
 {
 	if [ ! -f "`which \"$HEIMDALL\"`" ]; then
 		echo Couldn\'t find heimdall.
+		echo Install Heimdall v1.3.1 from http://www.glassechidna.com.au/products/heimdall/
 		exit -1
 	fi
 
-	$ADB reboot download || echo Couldn\'t reboot into download mode. Hope you\'re already in download mode
-	sleep 8
+	$ADB reboot download && sleep 8
+	if [ $? -ne 0 ]; then
+		echo Couldn\'t reboot into download mode. Hope you\'re already in download mode
+	fi
 
 	case $1 in
 	"system")
@@ -79,19 +83,44 @@ flash_heimdall()
 		update_time
 		;;
 	esac
+
+	ret=$?
+	echo -ne \\a
+	if [ $ret -ne 0 ]; then
+		echo Heimdall flashing failed.
+		case "`uname`" in
+		"Darwin")
+			if kextstat | grep com.devguru.driver.Samsung > /dev/null ; then
+				echo Kies drivers found.
+				echo Uninstall kies completely and restart your system.
+			else
+				echo Restart your system if you\'ve just installed heimdall.
+			fi
+			;;
+		"Linux")
+			echo Make sure you have a line like
+			echo SUBSYSTEM==\"usb\", ATTRS{idVendor}==\"04e8\", MODE=\"0666\"
+			echo in /etc/udev/rules.d/android.rules
+			;;
+		esac
+		exit -1
+	fi
+
+	echo Run \|./flash.sh gaia\| if you wish to install or update gaia.
 }
 
 case "$1" in
 "gecko")
 	$ADB remount &&
-	$ADB push $GECKO_OBJDIR/dist/b2g /system/b2g
-	$ADB shell stop b2g
-	$ADB shell start b2g
+	$ADB push $GECKO_OBJDIR/dist/b2g /system/b2g &&
+	echo Restarting B2G &&
+	$ADB shell stop b2g &&
+	$ADB shell start b2g &&
 	exit $?
 	;;
 
 "gaia")
-	make -C gaia install-gaia
+	make -C gaia install-gaia ADB="$ADB"
 	exit $?
 	;;
 
