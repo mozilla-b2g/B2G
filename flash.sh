@@ -13,6 +13,20 @@ if [ ! -f "`which \"$FASTBOOT\"`" ]; then
 	FASTBOOT=out/host/`uname -s | tr "[[:upper:]]" "[[:lower:]]"`-x86/bin/fastboot
 fi
 
+update_time()
+{
+	if [ `uname` = Darwin ]; then
+		echo On OSX - Assuming PDT
+		TIMEZONE="PDT+07"
+	else
+		TIMEZONE=`date +%Z%:::z|tr +- -+`
+	fi
+	echo Attempting to set the time on the device
+	$ADB wait-for-device &&
+	$ADB shell toolbox date `date +%s` &&
+	$ADB shell setprop persist.sys.timezone $TIMEZONE
+}
+
 flash_fastboot()
 {
 	$ADB reboot bootloader ;
@@ -35,7 +49,8 @@ flash_fastboot()
 		$FASTBOOT flash userdata out/target/product/$DEVICE/userdata.img &&
 		$FASTBOOT flash boot out/target/product/$DEVICE/boot.img &&
 		$FASTBOOT flash system out/target/product/$DEVICE/system.img &&
-		$FASTBOOT reboot
+		$FASTBOOT reboot &&
+		update_time
 		;;
 	esac
 }
@@ -60,17 +75,10 @@ flash_heimdall()
 		;;
 
 	*)
-		$HEIMDALL flash --factoryfs out/target/product/$DEVICE/system.img --kernel device/samsung/$DEVICE/kernel
+		$HEIMDALL flash --factoryfs out/target/product/$DEVICE/system.img --kernel device/samsung/$DEVICE/kernel &&
+		update_time
 		;;
 	esac
-}
-
-update_time()
-{
-	echo Attempting to set the time on the device
-	$ADB wait-for-device &&
-	$ADB shell toolbox date `date +%s` &&
-	$ADB shell setprop persist.sys.timezone `date +%Z%:::z|tr +- -+`
 }
 
 case "$1" in
@@ -86,17 +94,20 @@ case "$1" in
 	make -C gaia install-gaia
 	exit $?
 	;;
+
+"time")
+	update_time
+	exit $?
+	;;
 esac
 
 case "$DEVICE" in
 "maguro")
-	flash_fastboot $1 &&
-	update_time
+	flash_fastboot $1
 	;;
 
 "crespo")
-	flash_fastboot $1 &&
-	update_time
+	flash_fastboot $1
 	;;
 
 "galaxys2")
@@ -104,7 +115,11 @@ case "$DEVICE" in
 	;;
 
 *)
-	echo Unsupported device \"$DEVICE\", can\'t flash
-	exit -1
+	if [[ $(type -t flash_${DEVICE}) = function ]]; then
+		flash_${DEVICE} $1
+	else
+		echo Unsupported device \"$DEVICE\", can\'t flash
+		exit -1
+	fi
 	;;
 esac
