@@ -4,7 +4,7 @@
 
 ADB=adb
 GDB_PORT=22576
-GDB=prebuilt/`uname -s | tr "[[:upper:]]" "[[:lower:]]"`-x86/toolchain/arm-linux-androideabi-4.4.x/bin/arm-linux-androideabi-gdb
+GDB=${GDB:-prebuilt/`uname -s | tr "[[:upper:]]" "[[:lower:]]"`-x86/toolchain/arm-linux-androideabi-4.4.x/bin/arm-linux-androideabi-gdb}
 B2G_BIN=/system/b2g/b2g
 GDBINIT=/tmp/b2g.gdbinit.`whoami`
 
