@@ -14,15 +14,15 @@ install_blobs() {
 }
 
 repo_sync() {
-	if [ "$1" = "$GIT_TEMP_REPO" ]; then
+	if [ "$GITREPO" = "$GIT_TEMP_REPO" ]; then
 		BRANCH="master"
 	else
-		BRANCH=$2
+		BRANCH=$1
 	fi
 	rm -rf .repo/manifest* &&
-	$REPO init -u $1 -b $BRANCH &&
+	$REPO init -u $GITREPO -b $BRANCH &&
 	$REPO sync
-	if [ "$1" = "$GIT_TEMP_REPO" ]; then
+	if [ "$GITREPO" = "$GIT_TEMP_REPO" ]; then
 		rm -rf $GIT_TEMP_REPO
 	fi
 }
@@ -57,7 +57,7 @@ fi
 case "$1" in
 "galaxy-s2")
 	echo DEVICE=galaxys2 > .config &&
-	repo_sync $GITREPO galaxy-s2 &&
+	repo_sync galaxy-s2 &&
 	(cd device/samsung/galaxys2 && ./extract-files.sh)
 	;;
 
@@ -67,7 +67,7 @@ case "$1" in
                       samsung-maguro-imm76d-d16591cf.tgz"
 	echo DEVICE=maguro > .config &&
 	install_blobs galaxy-nexus "$MAGURO_BLOBS" &&
-	repo_sync $GITREPO maguro
+	repo_sync maguro
 	;;
 
 "nexus-s")
@@ -78,19 +78,19 @@ case "$1" in
 		      samsung-crespo-imm76d-d2d82200.tgz"
 	echo DEVICE=crespo > .config &&
 	install_blobs nexus-s "$CRESPO_BLOBS" &&
-	repo_sync $GITREPO crespo
+	repo_sync crespo
 	;;
 
 "emulator")
 	echo DEVICE=generic > .config &&
 	echo LUNCH=generic-eng >> .config &&
-	repo_sync $GITREPO master
+	repo_sync master
 	;;
 
 "emulator-x86")
 	echo DEVICE=generic > .config &&
 	echo LUNCH=full_x86-eng >> .config &&
-	repo_sync $GITREPO master
+	repo_sync master
 	;;
 
 *)
