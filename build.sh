@@ -9,6 +9,7 @@ if [ $ret -ne 0 ]; then
 	echo
 	echo \> Build failed\! \<
 	echo
+	echo Build with \|./build.sh -j1\| for better messages
 	echo If all else fails, use \|rm -rf objdir-gecko\| to clobber gecko and \|rm -rf out\| to clobber everything else.
 else
 	if echo $DEVICE | grep generic > /dev/null ; then
