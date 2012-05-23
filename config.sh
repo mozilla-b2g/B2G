@@ -14,9 +14,17 @@ install_blobs() {
 }
 
 repo_sync() {
+	if [ "$GITREPO" = "$GIT_TEMP_REPO" ]; then
+		BRANCH="master"
+	else
+		BRANCH=$1
+	fi
 	rm -rf .repo/manifest* &&
-	$REPO init -u git://github.com/mozilla-b2g/b2g-manifest -b $1 &&
+	$REPO init -u $GITREPO -b $BRANCH &&
 	$REPO sync
+	if [ "$GITREPO" = "$GIT_TEMP_REPO" ]; then
+		rm -rf $GIT_TEMP_REPO
+	fi
 }
 
 case `uname` in
@@ -30,6 +38,21 @@ case `uname` in
 	echo Unsupported platform: `uname`
 	exit -1
 esac
+
+GIT_TEMP_REPO="tmp_manifest_repo"
+if [ -n "$2" ]; then
+	GITREPO=$GIT_TEMP_REPO
+	GITBRANCH="master"
+	rm -rf $GITREPO &&
+	git init $GITREPO &&
+	cp $2 $GITREPO/default.xml &&
+	cd $GITREPO &&
+	git add default.xml &&
+	git commit -m "manifest" &&
+	cd ..
+else
+	GITREPO="git://github.com/mozilla-b2g/b2g-manifest"
+fi
 
 case "$1" in
 "galaxy-s2")
