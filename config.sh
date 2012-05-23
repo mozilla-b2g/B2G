@@ -14,9 +14,17 @@ install_blobs() {
 }
 
 repo_sync() {
+	if [ "$1" = "$GIT_TEMP_REPO" ]; then
+		BRANCH="master"
+	else
+		BRANCH=$2
+	fi
 	rm -rf .repo/manifest* &&
-	$REPO init -u $1 -b $2 &&
+	$REPO init -u $1 -b $BRANCH &&
 	$REPO sync
+	if [ "$1" = "$GIT_TEMP_REPO" ]; then
+		rm -rf $GIT_TEMP_REPO
+	fi
 }
 
 case `uname` in
@@ -31,42 +39,38 @@ case `uname` in
 	exit -1
 esac
 
+GIT_TEMP_REPO="tmp_manifest_repo"
 if [ -n "$2" ]; then
-  GITREPO=$2
+	GITREPO=$GIT_TEMP_REPO
+	GITBRANCH="master"
+	rm -rf $GITREPO &&
+	git init $GITREPO &&
+	cp $2 $GITREPO/default.xml &&
+	cd $GITREPO &&
+	git add default.xml &&
+	git commit -m "manifest" &&
+	cd ..
 else
-  GITREPO="git://github.com/mozilla-b2g/b2g-manifest"
-fi
-
-if [ -n "$3" ]; then
-  GITBRANCH=$3
+	GITREPO="git://github.com/mozilla-b2g/b2g-manifest"
 fi
 
 case "$1" in
 "galaxy-s2")
-	if [ ! -n "$GITBRANCH" ]; then
-	  GITBRANCH="galaxy-s2"
-	fi
 	echo DEVICE=galaxys2 > .config &&
-	repo_sync $GITREPO $GITBRANCH &&
+	repo_sync $GITREPO galaxy-s2 &&
 	(cd device/samsung/galaxys2 && ./extract-files.sh)
 	;;
 
 "galaxy-nexus")
-	if [ ! -n "$GITBRANCH" ]; then
-	  GITBRANCH="maguro"
-	fi
 	MAGURO_BLOBS="broadcom-maguro-imm76d-4ee51a8d.tgz
                       imgtec-maguro-imm76d-0f59ea74.tgz
                       samsung-maguro-imm76d-d16591cf.tgz"
 	echo DEVICE=maguro > .config &&
 	install_blobs galaxy-nexus "$MAGURO_BLOBS" &&
-	repo_sync $GITREPO $GITBRANCH
+	repo_sync $GITREPO maguro
 	;;
 
 "nexus-s")
-	if [ ! -n "$GITBRANCH" ]; then
-	  GITBRANCH="crespo"
-	fi
 	CRESPO_BLOBS="akm-crespo-imm76d-8314bd5a.tgz
 		      broadcom-crespo-imm76d-a794e660.tgz
 		      imgtec-crespo-imm76d-d381b3bf.tgz
@@ -74,25 +78,19 @@ case "$1" in
 		      samsung-crespo-imm76d-d2d82200.tgz"
 	echo DEVICE=crespo > .config &&
 	install_blobs nexus-s "$CRESPO_BLOBS" &&
-	repo_sync $GITREPO $GITBRANCH
+	repo_sync $GITREPO crespo
 	;;
 
 "emulator")
-	if [ ! -n "$GITBRANCH" ]; then
-	  GITBRANCH="master"
-	fi
 	echo DEVICE=generic > .config &&
 	echo LUNCH=generic-eng >> .config &&
-	repo_sync $GITREPO $GITBRANCH
+	repo_sync $GITREPO master
 	;;
 
 "emulator-x86")
-	if [ ! -n "$GITBRANCH" ]; then
-	  GITBRANCH="master"
-	fi
 	echo DEVICE=generic > .config &&
 	echo LUNCH=full_x86-eng >> .config &&
-	repo_sync $GITREPO $GITBRANCH
+	repo_sync $GITREPO master
 	;;
 
 *)
