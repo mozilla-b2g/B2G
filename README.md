@@ -30,6 +30,7 @@ and talk to us on IRC:
 * ccache
 * gcc/g++
 * bison
+* flex
 * 32bit ncurses
 * 32bit zlib
 * make
@@ -37,10 +38,9 @@ and talk to us on IRC:
 ### OSX
 
 * XCode
-* 20GB of free space on a case sensitive filesystem
-  * See http://source.android.com/source/initializing.html on creating a case sensitive disk image.
+* 20GB of free space
 * homebrew
-  * git
+  * git (if not using XCode 4)
   * gpg
   * ccache
   * autoconf-2.13 - brew install https://raw.github.com/Homebrew/homebrew-versions/master/autoconf213.rb
@@ -57,7 +57,7 @@ And then run config.sh for the device you want to build for:
 
 ### Building against a custom Gecko
 
-It can sometimes be useful to build against a different Gecko than the one specified in the manifest, e.g. a mozilla-central checkout that has some patches applied. To do so, edit .config:
+It can sometimes be useful to build against a different Gecko than the one specified in the manifest, e.g. a mozilla-central checkout that has some patches applied. To do so, edit .userconfig:
 
     GECKO_PATH=/path/to/mozilla-central
     GECKO_OBJDIR=/path/to/mozilla-central/objdir-gonk
