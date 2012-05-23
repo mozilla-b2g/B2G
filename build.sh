@@ -12,7 +12,7 @@ if [ $ret -ne 0 ]; then
 	echo If all else fails, use \|rm -rf objdir-gecko\| to clobber gecko and \|rm -rf out\| to clobber everything else.
 else
 	if echo $DEVICE | grep generic > /dev/null ; then
-		Run \|./run-emulator.sh\| to start the emulator
+		echo Run \|./run-emulator.sh\| to start the emulator
 		exit 0
 	fi
 	case "$1" in
