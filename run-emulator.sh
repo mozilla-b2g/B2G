@@ -35,4 +35,5 @@ ${DBG_CMD} $EMULATOR \
    -skindir $B2G_HOME/development/tools/emulator/skins \
    -skin WVGA854 \
    -verbose \
+   -gpu on \
    -qemu $TAIL_ARGS

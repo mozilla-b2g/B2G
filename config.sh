@@ -83,7 +83,7 @@ case "$1" in
 
 "emulator")
 	echo DEVICE=generic > .config &&
-	echo LUNCH=generic-eng >> .config &&
+	echo LUNCH=full-eng >> .config &&
 	repo_sync master
 	;;
 
