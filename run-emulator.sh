@@ -33,7 +33,7 @@ ${DBG_CMD} $EMULATOR \
    -memory 512 \
    -partition-size 512 \
    -skindir $B2G_HOME/development/tools/emulator/skins \
-   -skin WVGA854 \
+   -skin WVGA800 \
    -verbose \
    -gpu on \
    -qemu $TAIL_ARGS
