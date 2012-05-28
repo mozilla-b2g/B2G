@@ -22,8 +22,13 @@ repo_sync() {
 	rm -rf .repo/manifest* &&
 	$REPO init -u $GITREPO -b $BRANCH &&
 	$REPO sync
+	ret=$?
 	if [ "$GITREPO" = "$GIT_TEMP_REPO" ]; then
 		rm -rf $GIT_TEMP_REPO
+	fi
+	if [ $ret -ne 0 ]; then
+		echo Repo sync failed
+		exit -1
 	fi
 }
 
