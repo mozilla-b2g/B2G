@@ -28,7 +28,7 @@ if __name__ == '__main__':
 del magic
 
 # increment this whenever we make important changes to this script
-VERSION = (1, 15)
+VERSION = (1, 16)
 
 # increment this if the MAINTAINER_KEYS block is modified
 KEYRING_VERSION = (1,0)
@@ -126,9 +126,14 @@ group.add_option('--depth', type='int', default=None,
                  dest='depth',
                  help='create a shallow clone with given depth; see git clone')
 group.add_option('-g', '--groups',
-                 dest='groups', default="",
+                 dest='groups', default='default',
                  help='restrict manifest projects to ones with a specified group',
                  metavar='GROUP')
+group.add_option('-p', '--platform',
+                 dest='platform', default="auto",
+                 help='restrict manifest projects to ones with a specified'
+                      'platform group [auto|all|none|linux|darwin|...]',
+                 metavar='PLATFORM')
 
 
 # Tool
