@@ -25,6 +25,7 @@ else
     TAIL_ARGS="$TAIL_ARGS -cpu cortex-a8"
 fi
 
+export DYLD_LIBRARY_PATH="$B2G_HOME/out/host/darwin-x86/lib"
 export PATH=$PATH:$TOOLS_PATH
 ${DBG_CMD} $EMULATOR \
    -kernel $KERNEL \
