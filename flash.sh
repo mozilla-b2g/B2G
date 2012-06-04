@@ -31,15 +31,15 @@ flash_fastboot()
 {
 	$ADB reboot bootloader ;
 	$FASTBOOT devices &&
-	( $FASTBOOT oem unlock || true )
+	( [ "$1" = "nounlock" ] || $FASTBOOT oem unlock || true )
 
 	if [ $? -ne 0 ]; then
 		echo Couldn\'t setup fastboot
 		return -1
 	fi
-	case $1 in
+	case $2 in
 	"system" | "boot" | "userdata")
-		$FASTBOOT flash $1 out/target/product/$DEVICE/$1.img &&
+		$FASTBOOT flash $2 out/target/product/$DEVICE/$2.img &&
 		$FASTBOOT reboot
 		;;
 
@@ -47,6 +47,7 @@ flash_fastboot()
 		$FASTBOOT erase cache &&
 		$FASTBOOT erase userdata &&
 		$FASTBOOT flash userdata out/target/product/$DEVICE/userdata.img &&
+		[ ! -e out/target/product/$DEVICE/boot.img ] ||
 		$FASTBOOT flash boot out/target/product/$DEVICE/boot.img &&
 		$FASTBOOT flash system out/target/product/$DEVICE/system.img &&
 		$FASTBOOT reboot &&
@@ -131,12 +132,16 @@ case "$1" in
 esac
 
 case "$DEVICE" in
+"otoro")
+	flash_fastboot nounlock $1
+	;;
+
 "maguro")
-	flash_fastboot $1
+	flash_fastboot unlock $1
 	;;
 
 "crespo")
-	flash_fastboot $1
+	flash_fastboot unlock $1
 	;;
 
 "galaxys2")

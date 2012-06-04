@@ -86,6 +86,12 @@ case "$1" in
 	repo_sync crespo
 	;;
 
+"otoro")
+	echo DEVICE=otoro > .config &&
+	repo_sync otoro &&
+	(cd device/qcom/otoro && ./extract-files.sh)
+	;;
+
 "emulator")
 	echo DEVICE=generic > .config &&
 	echo LUNCH=full-eng >> .config &&
