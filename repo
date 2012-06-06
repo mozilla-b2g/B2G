@@ -2,7 +2,7 @@
 
 ## repo default configuration
 ##
-REPO_URL='https://code.google.com/p/git-repo/'
+REPO_URL='https://gerrit.googlesource.com/git-repo'
 REPO_REV='stable'
 
 # Copyright (C) 2008 Google Inc.
@@ -28,7 +28,7 @@ if __name__ == '__main__':
 del magic
 
 # increment this whenever we make important changes to this script
-VERSION = (1, 16)
+VERSION = (1, 17)
 
 # increment this if the MAINTAINER_KEYS block is modified
 KEYRING_VERSION = (1,0)
@@ -220,7 +220,17 @@ def _Init(args):
 
 def _CheckGitVersion():
   cmd = [GIT, '--version']
-  proc = subprocess.Popen(cmd, stdout=subprocess.PIPE)
+  try:
+    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE)
+  except OSError, e:
+    print >>sys.stderr
+    print >>sys.stderr, "fatal: '%s' is not available" % GIT
+    print >>sys.stderr, 'fatal: %s' % e
+    print >>sys.stderr
+    print >>sys.stderr, 'Please make sure %s is installed'\
+                        ' and in your path.' % GIT
+    raise CloneFailure()
+
   ver_str = proc.stdout.read().strip()
   proc.stdout.close()
   proc.wait()
