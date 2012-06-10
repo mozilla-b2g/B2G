@@ -111,6 +111,7 @@ case "$1" in
 	echo - galaxy-s2
 	echo - galaxy-nexus
 	echo - nexus-s
+	echo - otoro
 	echo - emulator
 	echo - emulator-x86
 	exit -1
