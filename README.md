@@ -68,7 +68,7 @@ Run build.sh or bld.sh to build B2G.
 
     ./build.sh
 
-If you want to just build gecko or some other project, just specify it:
+Once you have completed this initial build, you can build gecko (or other projects) individually: 
 
     ./build.sh gecko
 
