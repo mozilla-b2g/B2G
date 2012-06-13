@@ -76,14 +76,9 @@ case "$1" in
 	;;
 
 "nexus-s")
-	CRESPO_BLOBS="akm-crespo-imm76d-8314bd5a.tgz
-		      broadcom-crespo-imm76d-a794e660.tgz
-		      imgtec-crespo-imm76d-d381b3bf.tgz
-		      nxp-crespo-imm76d-d3862877.tgz
-		      samsung-crespo-imm76d-d2d82200.tgz"
 	echo DEVICE=crespo > .config &&
-	install_blobs nexus-s "$CRESPO_BLOBS" &&
-	repo_sync crespo
+	repo_sync crespo &&
+	(cd device/samsung/crespo && ./download-blobs.sh)
 	;;
 
 "otoro")
