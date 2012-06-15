@@ -14,16 +14,38 @@ fi
 # specified to run specific tests (an individual test file, a directory,
 # or an .ini file).
 TEST_PATH=$GECKO_PATH/testing/marionette/client/marionette/tests/unit-tests.ini
-if [ "$#" -gt 0 ]; then
-  TEST_PATH=$@
-fi
-echo "Running tests from $TEST_PATH"
+MARIONETTE_FLAGS+=" --homedir=$B2G_HOME --type=b2g"
+USE_EMULATOR=yes
 
-if [ "$DEVICE" = "generic_x86" ]; then
-  ARCH=x86
-else
-  ARCH=arm
+# Allow other marionette arguments to override the default --emulator argument
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --address=*|--emulator=*)
+      MARIONETTE_FLAGS+=" $1"
+      USE_EMULATOR=no ;;
+    --*)
+      MARIONETTE_FLAGS+=" $1" ;;
+    *)
+      MARIONETTE_TESTS+=" $1" ;;
+  esac
+  shift
+done
+
+if [ "$USE_EMULATOR" = "yes" ]; then
+  if [ "$DEVICE" = "generic_x86" ]; then
+    ARCH=x86
+  else
+    ARCH=arm
+  fi
+  MARIONETTE_FLAGS+=" --emulator=$ARCH"
 fi
+
+MARIONETTE_TESTS=${MARIONETTE_TESTS:-$TEST_PATH}
+
+echo "Running tests: $MARIONETTE_TESTS"
 
 SCRIPT=$GECKO_PATH/testing/marionette/client/marionette/venv_test.sh
-bash $SCRIPT `which python` --emulator=$ARCH --homedir=$B2G_HOME --type=b2g $MARIONETTE_FLAGS $TEST_PATH
+PYTHON=`which python`
+
+echo bash $SCRIPT "$PYTHON" $MARIONETTE_FLAGS $MARIONETTE_TESTS
+bash $SCRIPT "$PYTHON" $MARIONETTE_FLAGS $MARIONETTE_TESTS
