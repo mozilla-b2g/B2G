@@ -1,9 +1,0 @@
-
-more() {
-	return 0
-}
-
-read() {
-	typed="I ACCEPT"
-}
-

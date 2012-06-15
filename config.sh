@@ -2,17 +2,6 @@
 
 REPO=./repo
 
-install_blobs() {
-	mkdir -p download-$1 &&
-	for BLOB in $2 ; do
-		curl https://dl.google.com/dl/android/aosp/$BLOB -o download-$1/$BLOB -z download-$1/$BLOB &&
-		tar xvfz download-$1/$BLOB -C download-$1
-	done &&
-	for BLOB_SH in download-$1/extract-*.sh ; do
-		BASH_ENV=extract.rc bash $BLOB_SH
-	done
-}
-
 repo_sync() {
 	if [ "$GITREPO" = "$GIT_TEMP_REPO" ]; then
 		BRANCH="master"
@@ -67,12 +56,9 @@ case "$1" in
 	;;
 
 "galaxy-nexus")
-	MAGURO_BLOBS="broadcom-maguro-imm76d-4ee51a8d.tgz
-                      imgtec-maguro-imm76d-0f59ea74.tgz
-                      samsung-maguro-imm76d-d16591cf.tgz"
 	echo DEVICE=maguro > .config &&
-	install_blobs galaxy-nexus "$MAGURO_BLOBS" &&
-	repo_sync maguro
+	repo_sync maguro &&
+	(cd device/samsung/maguro && ./download-blobs.sh)
 	;;
 
 "nexus-s")
