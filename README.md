@@ -55,6 +55,25 @@ And then run config.sh for the device you want to build for:
 
     ./config.sh [device name]
 
+### Udev Permissions
+If you get "error: insufficient permissions for device".
+
+Obtain ID of device manufacturer (first 4 hexidecimal digits before colon):
+
+    $ lsusb
+
+Add a line to /etc/udev/rules.d/android.rules (replacing XXXX wtih 4 digit ID):
+
+    SUBSYSTEM=="usb", ATTRS{idVendor}=="XXXX", MODE="0666"
+
+Restart udev before re-plugging your device for it to be detected:
+
+    $ sudo service udev restart
+
+Re-run configure:
+
+    ./config.sh [device name]
+
 ### Building against a custom Gecko
 
 It can sometimes be useful to build against a different Gecko than the one specified in the manifest, e.g. a mozilla-central checkout that has some patches applied. To do so, edit .userconfig:
