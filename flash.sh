@@ -13,25 +13,43 @@ if [ ! -f "`which \"$FASTBOOT\"`" ]; then
 	FASTBOOT=out/host/`uname -s | tr "[[:upper:]]" "[[:lower:]]"`-x86/bin/fastboot
 fi
 
+run_adb()
+{
+	$ADB $ADB_FLAGS $@
+}
+
+run_fastboot()
+{
+	if [ "$1" = "devices" ]; then
+		$FASTBOOT $@
+	else
+		$FASTBOOT $FASTBOOT_FLAGS $@
+	fi
+	return $?
+}
+
 update_time()
 {
 	if [ `uname` = Darwin ]; then
-		echo On OSX - Assuming PDT
-		TIMEZONE="PDT+07"
+		OFFSET=`date +%z`
+		OFFSET=${OFFSET:0:3}
+		TIMEZONE=`date +%Z$OFFSET|tr +- -+`
 	else
 		TIMEZONE=`date +%Z%:::z|tr +- -+`
 	fi
 	echo Attempting to set the time on the device
-	$ADB wait-for-device &&
-	$ADB shell toolbox date `date +%s` &&
-	$ADB shell setprop persist.sys.timezone $TIMEZONE
+	run_adb wait-for-device &&
+	run_adb shell toolbox date `date +%s` &&
+	run_adb shell setprop persist.sys.timezone $TIMEZONE
 }
+
+
 
 flash_fastboot()
 {
-	$ADB reboot bootloader ;
-	$FASTBOOT devices &&
-	( [ "$1" = "nounlock" ] || $FASTBOOT oem unlock || true )
+	run_adb reboot bootloader ;
+	run_fastboot devices &&
+	( [ "$1" = "nounlock" ] || run_fastboot oem unlock || true )
 
 	if [ $? -ne 0 ]; then
 		echo Couldn\'t setup fastboot
@@ -39,18 +57,18 @@ flash_fastboot()
 	fi
 	case $2 in
 	"system" | "boot" | "userdata")
-		$FASTBOOT flash $2 out/target/product/$DEVICE/$2.img &&
-		$FASTBOOT reboot
+		run_fastboot flash $2 out/target/product/$DEVICE/$2.img &&
+		run_fastboot reboot
 		;;
 
 	*)
-		$FASTBOOT erase cache &&
-		$FASTBOOT erase userdata &&
-		$FASTBOOT flash userdata out/target/product/$DEVICE/userdata.img &&
+		run_fastboot erase cache &&
+		run_fastboot erase userdata &&
+		run_fastboot flash userdata out/target/product/$DEVICE/userdata.img &&
 		[ ! -e out/target/product/$DEVICE/boot.img ] ||
-		$FASTBOOT flash boot out/target/product/$DEVICE/boot.img &&
-		$FASTBOOT flash system out/target/product/$DEVICE/system.img &&
-		$FASTBOOT reboot &&
+		run_fastboot flash boot out/target/product/$DEVICE/boot.img &&
+		run_fastboot flash system out/target/product/$DEVICE/system.img &&
+		run_fastboot reboot &&
 		update_time
 		;;
 	esac
@@ -65,7 +83,7 @@ flash_heimdall()
 		exit -1
 	fi
 
-	$ADB reboot download && sleep 8
+	run_adb reboot download && sleep 8
 	if [ $? -ne 0 ]; then
 		echo Couldn\'t reboot into download mode. Hope you\'re already in download mode
 	fi
@@ -110,13 +128,27 @@ flash_heimdall()
 	echo Run \|./flash.sh gaia\| if you wish to install or update gaia.
 }
 
-case "$1" in
+while [ $# -gt 0 ]; do
+	case "$1" in
+	"-s")
+		ADB_FLAGS+="-s $2"
+		FASTBOOT_FLAGS+="-s $2"
+		shift
+		;;
+	*)
+		PROJECT=$1
+		;;
+	esac
+	shift
+done
+
+case "$PROJECT" in
 "gecko")
-	$ADB remount &&
-	$ADB push $GECKO_OBJDIR/dist/b2g /system/b2g &&
+	run_adb remount &&
+	run_adb push $GECKO_OBJDIR/dist/b2g /system/b2g &&
 	echo Restarting B2G &&
-	$ADB shell stop b2g &&
-	$ADB shell start b2g &&
+	run_adb shell stop b2g &&
+	run_adb shell start b2g &&
 	exit $?
 	;;
 
