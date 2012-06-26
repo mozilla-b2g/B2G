@@ -154,6 +154,7 @@ case "$PROJECT" in
 
 "gaia")
 	make -C gaia install-gaia ADB="$ADB"
+	make -C gaia install-media-samples ADB="$ADB"
 	exit $?
 	;;
 
