@@ -148,7 +148,7 @@ case "$PROJECT" in
 	run_adb push $GECKO_OBJDIR/dist/b2g /system/b2g &&
 	echo Restarting B2G &&
 	run_adb shell stop b2g &&
-	run_adb shell start b2g &&
+	run_adb shell start b2g
 	exit $?
 	;;
 
