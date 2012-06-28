@@ -166,24 +166,24 @@ esac
 
 case "$DEVICE" in
 "otoro")
-	flash_fastboot nounlock $1
+	flash_fastboot nounlock $PROJECT
 	;;
 
 "maguro")
-	flash_fastboot unlock $1
+	flash_fastboot unlock $PROJECT
 	;;
 
 "crespo")
-	flash_fastboot unlock $1
+	flash_fastboot unlock $PROJECT
 	;;
 
 "galaxys2")
-	flash_heimdall $1
+	flash_heimdall $PROJECT
 	;;
 
 *)
 	if [[ $(type -t flash_${DEVICE}) = function ]]; then
-		flash_${DEVICE} $1
+		flash_${DEVICE} $PROJECT
 	else
 		echo Unsupported device \"$DEVICE\", can\'t flash
 		exit -1
