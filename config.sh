@@ -67,6 +67,12 @@ case "$1" in
 	(cd device/samsung/crespo && ./download-blobs.sh)
 	;;
 
+"otoro_m4-demo")
+    echo DEVICE=otoro > .config &&
+    repo_sync otoro_m4-demo &&
+    (cd device/qcom/otoro && ./extract-files.sh)
+    ;;
+
 "otoro")
 	echo DEVICE=otoro > .config &&
 	repo_sync otoro &&
