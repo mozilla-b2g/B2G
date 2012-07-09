@@ -79,6 +79,12 @@ case "$1" in
 	(cd device/qcom/otoro && ./extract-files.sh)
 	;;
 
+"pandaboard")
+	echo DEVICE=panda > .config &&
+	repo_sync panda &&
+	(cd device/ti/panda && ./download-blobs.sh)
+	;;
+
 "emulator")
 	echo DEVICE=generic > .config &&
 	echo LUNCH=full-eng >> .config &&
@@ -99,6 +105,7 @@ case "$1" in
 	echo - galaxy-nexus
 	echo - nexus-s
 	echo - otoro
+	echo - pandaboard
 	echo - emulator
 	echo - emulator-x86
 	exit -1
