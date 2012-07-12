@@ -28,7 +28,7 @@ and talk to us on IRC:
 * autoconf-2.13
 * git
 * ccache
-* gcc/g++
+* gcc/g++ __4.6.3 or older__
 * bison
 * flex
 * 32bit ncurses
