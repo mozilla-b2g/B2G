@@ -48,52 +48,55 @@ else
 	GITREPO="git://github.com/mozilla-b2g/b2g-manifest"
 fi
 
+echo MAKE_FLAGS=-j$((CORE_COUNT + 2)) > .tmp-config
+echo GECKO_OBJDIR=$PWD/objdir-gecko >> .tmp-config
+
 case "$1" in
 "galaxy-s2")
-	echo DEVICE=galaxys2 > .config &&
+	echo DEVICE=galaxys2 >> .tmp-config &&
 	repo_sync galaxy-s2 &&
 	(cd device/samsung/galaxys2 && ./extract-files.sh)
 	;;
 
 "galaxy-nexus")
-	echo DEVICE=maguro > .config &&
+	echo DEVICE=maguro >> .tmp-config &&
 	repo_sync maguro &&
 	(cd device/samsung/maguro && ./download-blobs.sh)
 	;;
 
 "nexus-s")
-	echo DEVICE=crespo > .config &&
+	echo DEVICE=crespo >> .tmp-config &&
 	repo_sync crespo &&
 	(cd device/samsung/crespo && ./download-blobs.sh)
 	;;
 
 "otoro_m4-demo")
-    echo DEVICE=otoro > .config &&
+    echo DEVICE=otoro >> .tmp-config &&
     repo_sync otoro_m4-demo &&
     (cd device/qcom/otoro && ./extract-files.sh)
     ;;
 
 "otoro")
-	echo DEVICE=otoro > .config &&
+	echo DEVICE=otoro >> .tmp-config &&
 	repo_sync otoro &&
 	(cd device/qcom/otoro && ./extract-files.sh)
 	;;
 
 "pandaboard")
-	echo DEVICE=panda > .config &&
+	echo DEVICE=panda >> .tmp-config &&
 	repo_sync panda &&
 	(cd device/ti/panda && ./download-blobs.sh)
 	;;
 
 "emulator")
-	echo DEVICE=generic > .config &&
-	echo LUNCH=full-eng >> .config &&
+	echo DEVICE=generic >> .tmp-config &&
+	echo LUNCH=full-eng >> .tmp-config &&
 	repo_sync master
 	;;
 
 "emulator-x86")
-	echo DEVICE=generic_x86 > .config &&
-	echo LUNCH=full_x86-eng >> .config &&
+	echo DEVICE=generic_x86 >> .tmp-config &&
+	echo LUNCH=full_x86-eng >> .tmp-config &&
 	repo_sync master
 	;;
 
@@ -117,7 +120,6 @@ if [ $? -ne 0 ]; then
 	exit -1
 fi
 
-echo MAKE_FLAGS=-j$((CORE_COUNT + 2)) >> .config
-echo GECKO_OBJDIR=$PWD/objdir-gecko >> .config
+mv .tmp-config .config
 
 echo Run \|./build.sh\| to start building
