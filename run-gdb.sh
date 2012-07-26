@@ -21,7 +21,8 @@ if [ "$1" = "attach"  -a  -n "$2" ] ; then
       exit 1;
    fi
    GDB_PORT=$((10000 + ($B2G_PID + $(id -u)) % 50000))
-   B2G_BIN=`$ADB shell cat /proc/$B2G_PID/cmdline | awk '{ print \$1; }'`
+   # cmdline is null separated
+   B2G_BIN=`$ADB shell cat /proc/$B2G_PID/cmdline | awk 'BEGIN{FS="\0"}{ print \$1; }'`
 else
    B2G_PID=`$ADB shell toolbox ps | grep "b2g" | awk '{ print \$2; }'`
 fi
