@@ -16,10 +16,9 @@ fi
 
 output=gonk-toolchain-$1
 manifest_file=sources.xml
-if [ -z $2 ] ; then
+toolchain_target=linux-x86
+if [ $2 ] ; then
     toolchain_target=$2
-else
-    toolchain_target=linux-x86
 fi
 
 rm -rf $output ; mkdir -p $output
@@ -40,6 +39,7 @@ for i in \
     frameworks/base/native/include \
     frameworks/base/opengl/include \
     frameworks/base/services/sensorservice \
+    frameworks/base/services/camera/libcameraservice \
     hardware/libhardware/include \
     hardware/libhardware_legacy/include \
     ndk/sources/android/cpufeatures \
