@@ -7,7 +7,7 @@ b2g_basename=$(basename $b2g_root)
 b2g_parent=$(dirname $b2g_root)
 branch=$(cd $b2g_root/.repo/manifests && git rev-parse --abbrev-ref HEAD)
 manifest_file=sources.xml
-output="B2G_${branch}_${DEVICE_NAME}.tar.gz"
+output="../B2G_${branch}_${DEVICE_NAME}.tar.gz"
 
 if [ -n "$OUT_DIR" -a -d $b2g_root/$OUT_DIR ] ; then
         gecko_exclude="--exclude=${b2g_basename}/$OUT_DIR"
@@ -38,6 +38,7 @@ nice tar zcf "$output" \
     $android_exclude \
     $b2g_basename &&
 rm $manifest_file &&
+mv $output $PWD &&
 echo Done! &&
 echo "{'output': '$b2g_root/$output'}" ||
 echo "ERROR: Could not create tarball"
