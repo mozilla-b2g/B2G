@@ -71,6 +71,12 @@ case "$1" in
 	(cd device/samsung/crespo && ./download-blobs.sh)
 	;;
 
+"nexus-s-4g")
+	echo DEVICE=crespo4g >> .tmp-config &&
+	repo_sync crespo4g &&
+	(cd device/samsung/crespo4g && ./download-blobs.sh)
+	;;
+
 "otoro_m4-demo")
     echo DEVICE=otoro >> .tmp-config &&
     repo_sync otoro_m4-demo &&
@@ -108,6 +114,7 @@ case "$1" in
 	echo - galaxy-s2
 	echo - galaxy-nexus
 	echo - nexus-s
+	echo - nexus-s-4g
 	echo - otoro
 	echo - pandaboard
 	echo - emulator

@@ -177,7 +177,7 @@ case "$DEVICE" in
 	flash_fastboot unlock $PROJECT
 	;;
 
-"crespo")
+"crespo"|"crespo4g")
 	flash_fastboot unlock $PROJECT
 	;;
 
