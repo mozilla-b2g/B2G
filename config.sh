@@ -65,6 +65,12 @@ case "$1" in
 	(cd device/samsung/maguro && ./download-blobs.sh)
 	;;
 
+"optimus-l5")
+	echo DEVICE=m4 >> .tmp-config &&
+	repo_sync m4 &&
+	(cd device/lge/m4 && ./extract-files.sh)
+	;;
+
 "nexus-s")
 	echo DEVICE=crespo >> .tmp-config &&
 	repo_sync crespo &&
