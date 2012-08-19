@@ -24,7 +24,7 @@ if [ "$1" = "attach"  -a  -n "$2" ] ; then
    # cmdline is null separated
    B2G_BIN=`$ADB shell cat /proc/$B2G_PID/cmdline | awk 'BEGIN{FS="\0"}{ print \$1; }'`
 else
-   B2G_PID=`$ADB shell toolbox ps | grep "b2g" | awk '{ print \$2; }'`
+   B2G_PID=`$ADB shell toolbox ps | grep -v "plugin-container" | grep "b2g" | awk '{ print \$2; }'`
 fi
 
 for p in $GDBSERVER_PID ; do
@@ -38,7 +38,7 @@ done
 $ADB forward tcp:$GDB_PORT tcp:$GDB_PORT
 
 if [ "$1" = "attach" ]; then
-   if [ -z $B2G_PID ]; then
+   if [ -z "$B2G_PID" ]; then
       echo Error: No PID to attach to. B2G not running?
       exit 1
    fi
