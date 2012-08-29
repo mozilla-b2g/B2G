@@ -1,5 +1,6 @@
 #!/bin/bash
 
+SCRIPT_NAME=$(basename $0)
 . load-config.sh
 
 ADB=adb
@@ -64,5 +65,10 @@ echo "target extended-remote :$GDB_PORT" >> $GDBINIT
 PROG=$GECKO_OBJDIR/dist/bin/$(basename $B2G_BIN)
 [ -f $PROG ] || PROG=${SYMDIR}${B2G_BIN}
 
-echo $GDB -x $GDBINIT $PROG
-$GDB -x $GDBINIT $PROG
+if [ "$SCRIPT_NAME" == "run-ddd.sh" ]; then
+    echo "ddd --debugger \"$GDB -x $GDBINIT\" $PROG"
+    ddd --debugger "$GDB -x $GDBINIT" $PROG
+else
+    echo $GDB -x $GDBINIT $PROG
+    $GDB -x $GDBINIT $PROG
+fi
