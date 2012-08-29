@@ -34,6 +34,7 @@ fi
 for i in \
     bionic \
     external/stlport/stlport \
+    external/bluetooth/bluez \
     external/dbus \
     frameworks/base/include \
     frameworks/base/native/include \
