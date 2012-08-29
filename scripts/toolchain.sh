@@ -50,7 +50,8 @@ for i in \
     out/target/product/$DEVICE/obj/lib \
     prebuilt/ndk/android-ndk-r4/platforms/android-8/arch-arm \
     prebuilt/$toolchain_target/toolchain/arm-linux-androideabi-4.4.x \
-    system/core/include 
+    system/core/include \
+    system/media/wilhelm/include
 do 
     mkdir -p $output/$i
     cp -r $i/* $output/$i
