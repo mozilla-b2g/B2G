@@ -7,7 +7,8 @@ set -e
 
 cd ..
 
-if [ -z $REMOTE_HOST ] ; then REMOTE_HOST=runtime-binaries.pvt.build.mozilla.com ; fi
+# if [ -z $REMOTE_HOST ] ; then REMOTE_HOST=runtime-binaries.pvt.build.mozilla.com ; fi
+if [ -z $REMOTE_HOST ] ; then REMOTE_HOST=relengweb1.dmz.scl3.mozilla.com ; fi
 if [ -z $REMOTE_PATH ] ; then REMOTE_PATH=/var/www/html/runtime-binaries/tooltool/ ; fi
 if [ -z $ALGORITHM ] ; then ALGORITHM=sha512 ; fi
 if [ -z $VERSION ] ; then 
@@ -35,7 +36,7 @@ if [ ! -f tooltool/tooltool.py ] ; then
 else
     (cd tooltool && git fetch && git merge origin/master)
 fi
-rm new.manifest
+rm -f new.manifest
 python tooltool/tooltool.py -d $ALGORITHM -m new.manifest add gonk-toolchain-$VERSION.tar.bz2 setup.sh
 
 toolchainh=$(openssl dgst -$ALGORITHM < gonk-toolchain-$VERSION.tar.bz2 | sed "s/^(stdin)= //")
