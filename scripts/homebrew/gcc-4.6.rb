@@ -70,9 +70,6 @@ class Gcc46 < Formula
     ]
   end
 
-  # Dont strip compilers.
-  skip_clean :all
-
   def install
     # Force 64-bit on systems that use it. Build failures reported for some
     # systems when this is not done.
@@ -82,7 +79,7 @@ class Gcc46 < Formula
     ENV.delete 'LD'
 
     ENV.remove_from_cflags '-Qunused-arguments'
-    ENV.set_cpu_cflags 'core2'
+    ENV.set_cpu_flags 'core2'
 
     # This is required on systems running a version newer than 10.6, and
     # it's probably a good idea regardless.
@@ -109,7 +106,7 @@ class Gcc46 < Formula
       # ...and the binaries...
       "--bindir=#{bin}",
       # ...which are tagged with a suffix to distinguish them.
-      "--program-suffix=-#{version.slice(/\d\.\d/)}",
+      "--program-suffix=-#{version.to_s.slice(/\d\.\d/)}",
       "--with-gmp=#{gmp.prefix}",
       "--with-mpfr=#{mpfr.prefix}",
       "--with-mpc=#{libmpc.prefix}",
