@@ -2,8 +2,10 @@
 .repo/
 .userconfig
 *.swp
+Adreno*
 Makefile
 abi/
+backup-*/
 bionic/
 bootable/
 build/
@@ -18,9 +20,10 @@ gaia/
 gecko/
 gonk-misc/
 hardware/
+kernel/
 libcore/
 ndk/
-objdir-gecko/
+objdir-gecko*/
 out/
 prebuilt/
 prebuilts/
