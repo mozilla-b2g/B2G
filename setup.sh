@@ -2,7 +2,8 @@
 
 . load-config.sh
 
-LUNCH=${LUNCH:-full_${DEVICE}-eng}
+VARIANT=${VARIANT:-eng}
+LUNCH=${LUNCH:-full_${DEVICE}-${VARIANT}}
 
 export USE_CCACHE=yes &&
 export GECKO_PATH &&
