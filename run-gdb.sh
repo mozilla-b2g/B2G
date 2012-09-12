@@ -4,15 +4,14 @@ SCRIPT_NAME=$(basename $0)
 . load-config.sh
 
 ADB=adb
-GDB=${GDB:-prebuilt/`uname -s | tr "[[:upper:]]" "[[:lower:]]"`-x86/toolchain/arm-linux-androideabi-4.4.x/bin/arm-linux-androideabi-gdb}
+GDB=${GDB:-prebuilt/$(uname -s | tr "[[:upper:]]" "[[:lower:]]")-x86/toolchain/arm-linux-androideabi-4.4.x/bin/arm-linux-androideabi-gdb}
 B2G_BIN=/system/b2g/b2g
-GDBINIT=/tmp/b2g.gdbinit.`whoami`
+GDBINIT=/tmp/b2g.gdbinit.$(whoami)
 
 GONK_OBJDIR=out/target/product/$DEVICE
 SYMDIR=$GONK_OBJDIR/symbols
 
-GDBSERVER_PID=`$ADB shell toolbox ps |
-               grep "gdbserver" | awk '{ print \$2; }'`
+GDBSERVER_PID=$($ADB shell 'toolbox ps gdbserver | (read header; read user pid rest; echo $pid)')
 
 GDB_PORT=$((10000 + $(id -u) % 50000))
 if [ "$1" = "attach"  -a  -n "$2" ] ; then
@@ -23,9 +22,9 @@ if [ "$1" = "attach"  -a  -n "$2" ] ; then
    fi
    GDB_PORT=$((10000 + ($B2G_PID + $(id -u)) % 50000))
    # cmdline is null separated
-   B2G_BIN=`$ADB shell cat /proc/$B2G_PID/cmdline | awk 'BEGIN{FS="\0"}{ print \$0; }'`
+   B2G_BIN=$($ADB shell cat /proc/$B2G_PID/cmdline | tr '\0' '\n' | head -1)
 else
-   B2G_PID=`$ADB shell toolbox ps | grep -v "plugin-container" | grep "b2g" | awk '{ print \$2; }'`
+   B2G_PID=$($ADB shell 'toolbox ps b2g | (read header; read user pid rest; echo $pid)')
 fi
 
 for p in $GDBSERVER_PID ; do
