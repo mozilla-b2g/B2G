@@ -5,6 +5,7 @@
 ADB=${ADB:-adb}
 FASTBOOT=${FASTBOOT:-fastboot}
 HEIMDALL=${HEIMDALL:-heimdall}
+VARIANT=${VARIANT:-eng}
 
 if [ ! -f "`which \"$ADB\"`" ]; then
 	ADB=out/host/`uname -s | tr "[[:upper:]]" "[[:lower:]]"`-x86/bin/adb
@@ -171,8 +172,15 @@ case "$PROJECT" in
 	;;
 
 "gaia")
-	make -C gaia install-gaia ADB="$ADB"
-	make -C gaia install-media-samples ADB="$ADB"
+	GAIA_MAKE_FLAGS="ADB=\"$ADB\""
+	USER_VARIANTS="user(debug)?"
+	if [[ "$VARIANT" =~ $USER_VARIANTS ]]; then
+		# Gaia's build takes care of remounting /system for production builds
+		GAIA_MAKE_FLAGS+=" PRODUCTION=1"
+	fi
+
+	make -C gaia install-gaia $GAIA_MAKE_FLAGS
+	make -C gaia install-media-samples $GAIA_MAKE_FLAGS
 	exit $?
 	;;
 
