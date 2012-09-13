@@ -17,6 +17,10 @@ if [ -n "$GECKO_OBJDIR" -a -d $b2g_root/$GECKO_OBJDIR ] ; then
         gecko_exclude="--exclude=${b2g_basename}/$GECKO_OBJDIR"
 fi
 
+if [ -f "$EXCLUDE_FILE" ]; then
+    extra_excludes="--exclude-from=$EXCLUDE_FILE"
+fi
+
 [ $DEVICE_NAME ] && [ $branch ] &&
 echo Creating manifest &&
 $b2g_root/gonk-misc/add-revision.py $b2g_root/.repo/manifest.xml \
@@ -34,9 +38,11 @@ nice tar zcf "$output" \
     --exclude="$b2g_basename/repo" \
     --exclude="$b2g_basename/out" \
     --exclude="$b2g_basename/objdir-gecko" \
+    --exclude="B2G_*.tar.gz" \
     $gecko_exclude \
     $android_exclude \
-    $b2g_basename &&
+    $b2g_basename \
+    $extra_excludes &&
 rm $manifest_file &&
 mv $output $PWD &&
 echo Done! &&
