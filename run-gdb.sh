@@ -24,7 +24,7 @@ if [ "$1" = "attach"  -a  -n "$2" ] ; then
    # cmdline is null separated
    B2G_BIN=$($ADB shell cat /proc/$B2G_PID/cmdline | tr '\0' '\n' | head -1)
 else
-   B2G_PID=$($ADB shell 'toolbox ps b2g | (read header; read user pid rest; echo $pid)')
+   B2G_PID=$($ADB shell 'toolbox ps b2g | (read header; read user pid rest; echo -n $pid)')
 fi
 
 for p in $GDBSERVER_PID ; do
