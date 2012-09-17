@@ -89,10 +89,10 @@ case "$1" in
     (cd device/qcom/otoro && ./extract-files.sh)
     ;;
 
-"otoro")
-	echo DEVICE=otoro >> .tmp-config &&
+"otoro"|"unagi")
+	echo DEVICE=$1 >> .tmp-config &&
 	repo_sync otoro &&
-	(cd device/qcom/otoro && ./extract-files.sh)
+	(cd device/qcom/$1 && ./extract-files.sh)
 	;;
 
 "pandaboard")
