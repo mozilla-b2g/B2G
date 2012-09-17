@@ -122,6 +122,7 @@ case "$1" in
 	echo - nexus-s
 	echo - nexus-s-4g
 	echo - otoro
+	echo - unagi
 	echo - pandaboard
 	echo - emulator
 	echo - emulator-x86
