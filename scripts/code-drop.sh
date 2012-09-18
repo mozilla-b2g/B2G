@@ -1,5 +1,7 @@
 #!/bin/bash
 
+cd ..
+
 . load-config.sh
 
 b2g_root=$(cd `dirname $0` ; pwd)
