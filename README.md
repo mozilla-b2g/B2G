@@ -35,6 +35,9 @@ and talk to us on IRC:
 * 32bit zlib
 * make
 
+Additionally, if you're building the emulator, you probably need the the Mesa
+implementation of OpenGL.  On Ubuntu, this is the __libgl1-mesa-dev__ package.
+
 ### OSX
 
 * XCode
