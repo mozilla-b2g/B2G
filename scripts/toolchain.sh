@@ -33,10 +33,12 @@ fi
 # Important Directories
 for i in \
     bionic \
+    dalvik/libnativehelper/include/nativehelper \
     external/stlport/stlport \
     external/bluetooth/bluez \
     external/dbus \
     frameworks/base/include \
+    frameworks/base/media/libstagefright \
     frameworks/base/native/include \
     frameworks/base/opengl/include \
     frameworks/base/services/sensorservice \
@@ -48,7 +50,6 @@ for i in \
     ndk/sources/cxx-stl/stlport/stlport \
     ndk/sources/cxx-stl/gabi++/include \
     out/target/product/$DEVICE/obj/lib \
-    prebuilt/ndk/android-ndk-r4/platforms/android-8/arch-arm \
     prebuilt/$toolchain_target/toolchain/arm-linux-androideabi-4.4.x \
     system/core/include \
     system/media/wilhelm/include
