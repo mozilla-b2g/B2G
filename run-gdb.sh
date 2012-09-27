@@ -53,7 +53,7 @@ else
    [ -n "$MOZ_IPC_MESSAGE_LOG" ]     && GDBSERVER_ENV="$GDBSERVER_ENV MOZ_IPC_MESSAGE_LOG=$MOZ_IPC_MESSAGE_LOG "
    $ADB shell kill $B2G_PID
    [ "$B2G_BIN" = "/system/b2g/b2g" ] && $ADB shell stop b2g
-   $ADB shell LD_LIBRARY_PATH=/system/b2g LD_PRELOAD=/system/b2g/libmozglue.so $GDBSERVER_ENV gdbserver --multi :$GDB_PORT $B2G_BIN $@ &
+   $ADB shell LD_LIBRARY_PATH=/system/b2g LD_PRELOAD=/system/b2g/libmozglue.so TMPDIR=/data/local/tmp $GDBSERVER_ENV gdbserver --multi :$GDB_PORT $B2G_BIN $@ &
 fi
 
 sleep 1
