@@ -3,13 +3,8 @@
 REPO=./repo
 
 repo_sync() {
-	if [ "$GITREPO" = "$GIT_TEMP_REPO" ]; then
-		BRANCH="master"
-	else
-		BRANCH=$1
-	fi
 	rm -rf .repo/manifest* &&
-	$REPO init -u $GITREPO -b $BRANCH &&
+	$REPO init -u $GITREPO -b $BRANCH -m $1.xml &&
 	$REPO sync
 	ret=$?
 	if [ "$GITREPO" = "$GIT_TEMP_REPO" ]; then
@@ -33,19 +28,20 @@ case `uname` in
 	exit -1
 esac
 
+GITREPO=${GITREPO:-"git://github.com/mozilla-b2g/b2g-manifest"}
+BRANCH=${BRANCH:-master}
+
 GIT_TEMP_REPO="tmp_manifest_repo"
 if [ -n "$2" ]; then
 	GITREPO=$GIT_TEMP_REPO
 	GITBRANCH="master"
 	rm -rf $GITREPO &&
 	git init $GITREPO &&
-	cp $2 $GITREPO/default.xml &&
+	cp $2 $GITREPO/$1.xml &&
 	cd $GITREPO &&
-	git add default.xml &&
+	git add $1.xml &&
 	git commit -m "manifest" &&
 	cd ..
-else
-	GITREPO="git://github.com/mozilla-b2g/b2g-manifest"
 fi
 
 echo MAKE_FLAGS=-j$((CORE_COUNT + 2)) > .tmp-config
@@ -55,39 +51,33 @@ echo DEVICE_NAME=$1 >> .tmp-config
 case "$1" in
 "galaxy-s2")
 	echo DEVICE=galaxys2 >> .tmp-config &&
-	repo_sync galaxy-s2 &&
+	repo_sync $1 &&
 	(cd device/samsung/galaxys2 && ./extract-files.sh)
 	;;
 
 "galaxy-nexus")
 	echo DEVICE=maguro >> .tmp-config &&
-	repo_sync maguro &&
+	repo_sync $1 &&
 	(cd device/samsung/maguro && ./download-blobs.sh)
 	;;
 
 "optimus-l5")
 	echo DEVICE=m4 >> .tmp-config &&
-	repo_sync m4 &&
+	repo_sync $1 &&
 	(cd device/lge/m4 && ./extract-files.sh)
 	;;
 
 "nexus-s")
 	echo DEVICE=crespo >> .tmp-config &&
-	repo_sync crespo &&
+	repo_sync $1 &&
 	(cd device/samsung/crespo && ./download-blobs.sh)
 	;;
 
 "nexus-s-4g")
 	echo DEVICE=crespo4g >> .tmp-config &&
-	repo_sync crespo4g &&
+	repo_sync $1 &&
 	(cd device/samsung/crespo4g && ./download-blobs.sh)
 	;;
-
-"otoro_m4-demo")
-    echo DEVICE=otoro >> .tmp-config &&
-    repo_sync otoro_m4-demo &&
-    (cd device/qcom/otoro && ./extract-files.sh)
-    ;;
 
 "otoro"|"unagi")
 	echo DEVICE=$1 >> .tmp-config &&
@@ -97,20 +87,20 @@ case "$1" in
 
 "pandaboard")
 	echo DEVICE=panda >> .tmp-config &&
-	repo_sync panda &&
+	repo_sync $1 &&
 	(cd device/ti/panda && ./download-blobs.sh)
 	;;
 
 "emulator")
 	echo DEVICE=generic >> .tmp-config &&
 	echo LUNCH=full-eng >> .tmp-config &&
-	repo_sync master
+	repo_sync $1
 	;;
 
 "emulator-x86")
 	echo DEVICE=generic_x86 >> .tmp-config &&
 	echo LUNCH=full_x86-eng >> .tmp-config &&
-	repo_sync master
+	repo_sync emulator
 	;;
 
 *)
