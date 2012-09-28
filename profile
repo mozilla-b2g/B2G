@@ -42,6 +42,14 @@ find_pid() {
 
 ###########################################################################
 #
+# Sets B2G_PID to be the pid of the b2g process.
+#
+get_b2g_pid() {
+   echo $($ADB shell 'toolbox ps b2g | (read header; read user pid rest; echo -n $pid)')
+}
+
+###########################################################################
+#
 # Fill B2G_PIDS with an array of b2g process PIDs
 #
 get_pids() {
@@ -79,13 +87,47 @@ get_comms() {
 
 ###########################################################################
 #
+# Determines if the profiler is running for a given pid
+#
+# We use the traditional 0=success 1=failure return code.
+#
+is_profiler_running() {
+  local pid=$1
+  if [ -z "${pid}" ]; then
+    return 1
+  fi
+  local status="$(${ADB} shell cat /proc/${pid}/environ | tr '\0' '\n' | grep 'MOZ_PROFILER_STARTUP=1')"
+  if [ -z "${status}" ]; then
+    return 1
+  fi
+  return 0
+}
+
+###########################################################################
+#
 # Capture the profiling information from a given process.
 #
 HELP["capture"]="Signals, pulls, and symbolicates the profile data"
 cmd_capture() {
   cmd_signal $1
-  cmd_pull ${CMD_SIGNAL_PID} ${B2G_COMMS[${CMD_SIGNAL_PID}]}
-  cmd_symbolicate ${CMD_PULL_LOCAL_FILENAME}
+  get_comms
+  declare -A local_filename
+  local timestamp=$(date +"%H%M")
+  if [ "${CMD_SIGNAL_PID:0:1}" == "-" ]; then
+    # We signalled the entire process group. Pull and symbolicate
+    # each file
+    for pid in ${B2G_PIDS[*]}; do
+      cmd_pull ${pid} ${B2G_COMMS[${pid}]} ${timestamp}
+      local_filename[${pid}]=${CMD_PULL_LOCAL_FILENAME}
+    done
+    echo
+    for filename in ${local_filename[*]}; do
+      cmd_symbolicate ${filename}
+    done
+  else
+    cmd_pull ${CMD_SIGNAL_PID} ${B2G_COMMS[${CMD_SIGNAL_PID}]}
+    cmd_symbolicate ${CMD_PULL_LOCAL_FILENAME}
+  fi
 }
 
 ###########################################################################
@@ -125,11 +167,17 @@ cmd_ls() {
 #
 HELP["ps"]="Shows the B2G processes"
 cmd_ps() {
+  local status
   get_comms
   echo "  PID Name"
   echo "----- ----------------"
   for pid in ${B2G_PIDS[*]}; do
-    printf "%5d %s\n" "${pid}" "${B2G_COMMS[${pid}]}"
+    if is_profiler_running ${pid}; then
+      status="profiler running"
+    else
+      status="profiler not running"
+    fi
+    printf "%5d %-16s %s\n" "${pid}" "${B2G_COMMS[${pid}]}" "${status}"
   done
 }
 
@@ -141,6 +189,7 @@ HELP["pull"]="Pulls the profile data from the phone"
 cmd_pull() {
   local pid=$1
   local comm=$2
+  local label=$3
 
   # The profile data gets written to /data/local/tmp/profile_X_PID.txt
   # where X is the XRE_ProcessType (so 0 for the b2g process, 2 for
@@ -155,11 +204,13 @@ cmd_pull() {
   local local_filename
   if [ -z "${comm}" ]; then
     local_filename="profile_${pid}.txt"
-  else
+  elif [ -z "${label}" ]; then
     local_filename="profile_${pid}_${B2G_COMMS[${pid}]}.txt"
+  else
+    local_filename="profile_${label}_${pid}_${B2G_COMMS[${pid}]}.txt"
   fi
 
-  echo -n "Waiting for profile file to stabilize ..."
+  echo -n "Waiting for profile file for ${pid}:${B2G_COMMS[${pid}]} to stabilize ..."
   for attempt in 1 2 3 4 5 6 7 8 9 10; do
     profile_filename=$(${ADB} shell "echo -n ${profile_pattern}")
     if [ "${profile_filename}" == "${profile_pattern}" ]; then
@@ -177,23 +228,43 @@ cmd_pull() {
   fi
   local prev_ls
   local matches=0
-  while true; do
+  local filesize
+  local stabilized=0
+  for attempt in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15; do
     curr_ls=$(${ADB} shell "ls -l ${profile_pattern}")
-    if [ "${prev_ls}" != "${curr_ls}" ]; then
+    # Android's ls -l output looks like:
+    #   -rw-rw-rw- root     root      2078953 2012-09-28 15:14 profile_0_4601.txt
+    # if the file exists, or
+    #   /data/local/tmp/profile_?_4601.txt: No such file or directory
+    # if it doesn't. In the first case, field[3] corresponds to the file size. In
+    # the second case fields[3] will contain the word "file"
+    local fields=(${curr_ls})
+    filesize=${fields[3]}
+    if [ "${prev_ls}" != "${curr_ls}" -o "${filesize}" == "0" -o "${filesize}" == "file" ]; then
       prev_ls=${curr_ls}
       echo -n "."
-      sleep 1
+      echo -n "${filesize}"
       matches=0
     else
+      echo -n "+"
       matches=$(( ${matches} + 1 ))
       if [ ${matches} -ge 5 ]; then
         # If the filesize hasn't changed in 5 seconds then we consider
         # the file to be stabilized.
+        stabilized=1
         break
       fi
     fi
+    sleep 1
   done
   echo
+  if [ "${stabilized}" == "0" ]; then
+    # Whoops. The process probably got killed (due to OOM) by trying to
+    # collect the profile file. Skip it.
+    echo "Whoops. Looks like ${pid}:${B2G_COMMS[${pid}]} is gone. Skipping..."
+    CMD_PULL_LOCAL_FILENAME=
+    return
+  fi
 
   echo "Pulling ${profile_filename} into ${local_filename}"
   ${ADB} pull ${profile_filename} ${local_filename}
@@ -211,14 +282,22 @@ cmd_signal() {
   # see the results when it calls get_comms, but if we call get_comms,
   # then find_pid will see the results of us calling get_comms.
   get_comms
-  local pid=$(find_pid $1)
-  if [ "${pid}" == "" ]; then
-    echo "Must specify a PID or process-name to capture"
-    cmd_ps
-    exit 1
+  local pid
+  if [ -z "$1" ]; then
+    # If no pid is specified, then send a signal to the b2g process group.
+    # This will cause the signal to go to b2g and all of it subprocesses.
+    pid=-$(find_pid b2g)
+    echo "Signalling Process Group: ${pid:1} ${B2G_COMMS[${pid:1}]} ..."
+  else
+    pid=$(find_pid $1)
+    if [ "${pid}" == "" ]; then
+      echo "Must specify a PID or process-name to capture"
+      cmd_ps
+      exit 1
+    fi
+    echo "Signalling PID: ${pid} ${B2G_COMMS[${pid}]} ..."
   fi
 
-  echo "Signalling PID: ${pid} ${B2G_COMMS[${pid}]} ..."
   ${ADB} shell "kill -12 ${pid}"
   CMD_SIGNAL_PID=${pid}
 }
@@ -230,13 +309,22 @@ cmd_signal() {
 HELP["start"]="Starts the profiler"
 cmd_start() {
   stop_b2g
-  # If we try to start b2g immediately after stopping it, then it typically
-  # doesn't start. Adding a small sleep seems to work.
-  sleep 1
-
   echo -n "Starting b2g with profiling enabled ..."
-  ${ADB} shell "MOZ_PROFILER_STARTUP=1 /system/bin/b2g.sh > /dev/null" &
+  # Use nohup or we may accidentally kill the adb shell when this
+  # script exits.
+  nohup ${ADB} shell "MOZ_PROFILER_STARTUP=1 /system/bin/b2g.sh > /dev/null" > /dev/null 2>&1 &
   echo " started"
+}
+
+###########################################################################
+#
+# Stop profiling and start b2g normally
+#
+HELP["stop"]="Stops profileing and restarts b2g normally."
+cmd_stop() {
+  stop_b2g
+  echo "Restarting b2g (normally) ..."
+  ${ADB} shell start b2g
 }
 
 ###########################################################################
@@ -277,37 +365,45 @@ cmd_symbolicate() {
 stop_b2g() {
   local pid
   local attempt
-  echo -n "Stopping b2g ..."
-  ${ADB} shell "stop b2g"
-  for attempt in 1 2 3 4 5; do
-    pid=$(${ADB} shell 'toolbox ps b2g | (read header; read user pid rest; echo -n ${pid})')
-    if [ "${pid}" != "" ]; then
-        echo -n "."
-        sleep 1
-    fi
-  done
-  if [ "${pid}" != "" ]; then
-    echo
-    echo -n "b2g doesn't seem to be responding to stop. Being more forceful."
-    ${ADB} shell "kill ${pid}"
-    for attempt in 1 2 3; do
+  if is_profiler_running $(get_b2g_pid); then
+    echo -n "Profiler appears to be running."
+  else
+    # Note: stop sends SIGKILL, but only if b2g was launched via start
+    # If b2g was launched via the debugger or the profiler, then stop is
+    # essentially a no-op
+    echo -n "Stopping b2g ..."
+    ${ADB} shell "stop b2g"
+    for attempt in 1 2 3 4 5; do
       pid=$(${ADB} shell 'toolbox ps b2g | (read header; read user pid rest; echo -n ${pid})')
-      if [ "${pid}" != "" ]; then
-          echo -n "."
-          sleep 1
+      if [ "${pid}" == "" ]; then
+        break
       fi
+      echo -n "."
+      sleep 1
     done
   fi
+
+  # Now do a cleanup check and make sure that all of the b2g pids are actually gone
   clear_pids
   get_pids
   if [ "${#B2G_PIDS[*]}" -gt 0 ]; then
     echo
-    echo "b2g doesn't seem to be responding to kill. Being even more forceful."
+    echo -n "Killing b2g ..."
     for pid in ${B2G_PIDS[*]}; do
       ${ADB} shell "kill -9 ${pid}"
     done
-    sleep 1
+    for attempt in 1 2 3 4 5; do
+      clear_pids
+      get_pids
+      if [ "${#B2G_PIDS[*]}" == 0 ]; then
+        break
+      fi
+      echo -n "."
+      sleep 1
+    done
   fi
+
+  # And if things still haven't shutdown, then give up
   clear_pids
   get_pids
   if [ "${#B2G_PIDS[*]}" -gt 0 ]; then
