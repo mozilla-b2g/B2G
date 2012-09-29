@@ -320,7 +320,7 @@ cmd_start() {
 #
 # Stop profiling and start b2g normally
 #
-HELP["stop"]="Stops profileing and restarts b2g normally."
+HELP["stop"]="Stops profiling and restarts b2g normally."
 cmd_stop() {
   stop_b2g
   echo "Restarting b2g (normally) ..."
