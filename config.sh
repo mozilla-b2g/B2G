@@ -81,7 +81,7 @@ case "$1" in
 
 "otoro"|"unagi")
 	echo DEVICE=$1 >> .tmp-config &&
-	repo_sync otoro &&
+	repo_sync $1 &&
 	(cd device/qcom/$1 && ./extract-files.sh)
 	;;
 
