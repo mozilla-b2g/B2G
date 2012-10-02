@@ -1,6 +1,8 @@
 #!/bin/bash
 
-B2G_DIR=$(cd `dirname $0`; pwd)
+if [[ ! -n "$B2G_DIR" ]]; then
+  B2G_DIR=$(cd `dirname $0`; pwd)
+fi
 
 . "$B2G_DIR/.config"
 if [ $? -ne 0 ]; then
