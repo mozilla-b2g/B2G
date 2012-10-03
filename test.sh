@@ -1,51 +1,31 @@
 #!/bin/bash
 
-. setup.sh
-
-# Determine the absolute path of our location.
 B2G_HOME=$(cd `dirname $0`; pwd)
 
-# Use default Gecko location if it's not provided in .config.
-if [ -z $GECKO_PATH ]; then
-  GECKO_PATH=$B2G_HOME/gecko
+usage() {
+    echo "Usage: $0 [marionette|mochitest]"
+    echo ""
+    echo "'marionette' is the default frontend"
+}
+
+if [[ "$1" = "--help" ]]; then
+  usage
+  exit 0
 fi
 
-# Run standard set of tests by default. Command line arguments can be
-# specified to run specific tests (an individual test file, a directory,
-# or an .ini file).
-TEST_PATH=$GECKO_PATH/testing/marionette/client/marionette/tests/unit-tests.ini
-MARIONETTE_FLAGS+=" --homedir=$B2G_HOME --type=b2g"
-USE_EMULATOR=yes
+FRONTEND=${1:-marionette}
+shift
 
-# Allow other marionette arguments to override the default --emulator argument
-while [ $# -gt 0 ]; do
-  case "$1" in
-    --address=*|--emulator=*)
-      MARIONETTE_FLAGS+=" $1"
-      USE_EMULATOR=no ;;
-    --*)
-      MARIONETTE_FLAGS+=" $1" ;;
-    *)
-      MARIONETTE_TESTS+=" $1" ;;
-  esac
-  shift
-done
+case "$FRONTEND" in
+  mochitest)
+    SCRIPT=$B2G_HOME/scripts/mochitest.sh ;;
+  marionette)
+    SCRIPT=$B2G_HOME/scripts/marionette.sh ;;
+  *)
+    usage
+    echo "Error: Unknown test frontend: $FRONTEND" 1>&2
+    exit 1
+esac
 
-if [ "$USE_EMULATOR" = "yes" ]; then
-  if [ "$DEVICE" = "generic_x86" ]; then
-    ARCH=x86
-  else
-    ARCH=arm
-  fi
-  MARIONETTE_FLAGS+=" --emulator=$ARCH"
-fi
-
-MARIONETTE_TESTS=${MARIONETTE_TESTS:-$TEST_PATH}
-
-echo "Running tests: $MARIONETTE_TESTS"
-
-SCRIPT=$GECKO_PATH/testing/marionette/client/marionette/venv_test.sh
-PYTHON=`which python`
-
-echo bash $SCRIPT "$PYTHON" $MARIONETTE_FLAGS $MARIONETTE_TESTS
-bash $SCRIPT "$PYTHON" $MARIONETTE_FLAGS $MARIONETTE_TESTS
+echo $SCRIPT $@
+$SCRIPT $@
