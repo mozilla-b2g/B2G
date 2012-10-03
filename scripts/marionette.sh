@@ -13,7 +13,7 @@ fi
 # specified to run specific tests (an individual test file, a directory,
 # or an .ini file).
 TEST_PATH=$GECKO_PATH/testing/marionette/client/marionette/tests/unit-tests.ini
-MARIONETTE_FLAGS+=" --homedir=$B2G_DIR--type=b2g"
+MARIONETTE_FLAGS+=" --homedir=$B2G_DIR --type=b2g"
 USE_EMULATOR=yes
 
 # Allow other marionette arguments to override the default --emulator argument

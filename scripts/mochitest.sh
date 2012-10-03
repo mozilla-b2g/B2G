@@ -9,7 +9,7 @@ if [ -z $GECKO_PATH ]; then
 fi
 
 XRE_PATH=$B2G_DIR/gaia/xulrunner-sdk/bin
-MOCHITEST_FLAGS+="--b2gpath $B2G_DIR --xre-path $XRE_PATH"
+MOCHITEST_FLAGS+=" --b2gpath $B2G_DIR --xre-path $XRE_PATH"
 SCRIPT=$GECKO_PATH/testing/marionette/client/marionette/venv_mochitest.sh
 
 PYTHON=`which python`

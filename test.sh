@@ -3,24 +3,26 @@
 B2G_HOME=$(cd `dirname $0`; pwd)
 
 usage() {
-    echo "Usage: $0 [marionette|mochitest]"
+    echo "Usage: $0 [marionette|mochitest] (frontend-args)"
     echo ""
     echo "'marionette' is the default frontend"
 }
 
-if [[ "$1" = "--help" ]]; then
-  usage
-  exit 0
+FRONTEND=$1
+if [ -z "$FRONTEND" ]; then
+  FRONTEND=marionette
+else
+  shift
 fi
-
-FRONTEND=${1:-marionette}
-shift
 
 case "$FRONTEND" in
   mochitest)
     SCRIPT=$B2G_HOME/scripts/mochitest.sh ;;
   marionette)
     SCRIPT=$B2G_HOME/scripts/marionette.sh ;;
+  --help|-h|help)
+    usage
+    exit 0;;
   *)
     usage
     echo "Error: Unknown test frontend: $FRONTEND" 1>&2
