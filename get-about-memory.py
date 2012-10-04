@@ -21,6 +21,8 @@ import os
 import subprocess
 import textwrap
 import argparse
+import json
+from gzip import GzipFile
 from time import sleep
 
 def shell(cmd, cwd=None):
@@ -131,7 +133,31 @@ def get_files(args, master_pid, child_pids, old_files):
         shell('adb pull %s' % f, cwd=dir)
         pass
     print("Pulled files into %s." % dir)
+    merge_files(dir, [os.path.basename(f) for f in new_files])
     return dir
+
+def merge_files(dir, files):
+    """Merge the given memory reporter dump files into one giant file."""
+    dumps = [json.load(GzipFile(os.path.join(dir, f))) for f in files]
+
+    merged_dump = dumps[0]
+    for dump in dumps[1:]:
+        # All of the properties other than 'reports' must be identical in all
+        # dumps, otherwise we can't merge them.
+        if dump.keys() != merged_dump.keys():
+            print("Can't merge dumps because they don't have the "
+                  "same set of properties.")
+            return
+        for prop in merged_dump:
+            if prop != 'reports' and dump[prop] != merged_dump[prop]:
+                print("Can't merge dumps because they don't have the "
+                      "same value for property '%s'" % prop)
+
+        merged_dump['reports'] += dump['reports']
+
+    json.dump(merged_dump,
+              GzipFile(os.path.join(dir, 'merged-reports.gz'), 'w'),
+              indent=2)
 
 def remove_new_files(old_files):
     # Hopefully this command line won't get too long for ADB.
