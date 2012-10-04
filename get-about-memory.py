@@ -138,6 +138,7 @@ def remove_new_files(old_files):
     shell('adb shell rm %s' % ' '.join(["'%s'" % f for f in list_files() - old_files]))
 
 def get_procrank_etc(dir):
+    shell('adb shell procrank > procrank', cwd=dir)
     shell('adb shell b2g-ps > b2g-ps', cwd=dir)
     shell('adb shell b2g-procrank > b2g-procrank', cwd=dir)
 
