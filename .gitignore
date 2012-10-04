@@ -1,6 +1,7 @@
 .config
 .repo/
 .userconfig
+.var.profile
 *.swp
 Adreno*
 Makefile
@@ -22,6 +23,7 @@ gonk-misc/
 hardware/
 kernel/
 libcore/
+librecovery/
 ndk/
 objdir-gecko*/
 out/
