@@ -144,7 +144,7 @@ def merge_files(dir, files):
     for dump in dumps[1:]:
         # All of the properties other than 'reports' must be identical in all
         # dumps, otherwise we can't merge them.
-        if dump.keys() != merged_dump.keys():
+        if set(dump.keys()) != set(merged_dump.keys()):
             print("Can't merge dumps because they don't have the "
                   "same set of properties.")
             return
