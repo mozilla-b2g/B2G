@@ -12,10 +12,6 @@ from __future__ import print_function
 from __future__ import division
 
 import sys
-if sys.version_info < (2,7):
-    print('This script requires Python 2.7.')
-    sys.exit(1)
-
 import re
 import os
 import subprocess
@@ -24,6 +20,10 @@ import argparse
 import json
 from gzip import GzipFile
 from time import sleep
+
+if sys.version_info < (2,7):
+    print('This script requires Python 2.7.')
+    sys.exit(1)
 
 def shell(cmd, cwd=None):
     proc = subprocess.Popen(cmd, shell=True, cwd=cwd,
