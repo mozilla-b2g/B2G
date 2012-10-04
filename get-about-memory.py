@@ -4,22 +4,26 @@
 
 You can then view these dumps using Firefox on your desktop.
 
+We also include the output of b2g-procrank and b2g-ps.
+
 '''
 
 from __future__ import print_function
 from __future__ import division
 
 import sys
-if sys.version_info < (2,7):
-    print('This script requires Python 2.7.')
-    sys.exit(1)
-
 import re
 import os
 import subprocess
 import textwrap
 import argparse
+import json
+from gzip import GzipFile
 from time import sleep
+
+if sys.version_info < (2,7):
+    print('This script requires Python 2.7.')
+    sys.exit(1)
 
 def shell(cmd, cwd=None):
     proc = subprocess.Popen(cmd, shell=True, cwd=cwd,
@@ -116,6 +120,10 @@ def wait_for_all_files(num_expected_files, old_files):
     raise Exception("Missing some about:memory dumps.")
 
 def get_files(args, master_pid, child_pids, old_files):
+    """Get the memory reporter dumps from the device and return the directory
+    we saved them to.
+
+    """
     num_expected_files = 1 + len(child_pids)
 
     wait_for_all_files(num_expected_files, old_files)
@@ -125,18 +133,49 @@ def get_files(args, master_pid, child_pids, old_files):
         shell('adb pull %s' % f, cwd=dir)
         pass
     print("Pulled files into %s." % dir)
+    merge_files(dir, [os.path.basename(f) for f in new_files])
+    return dir
+
+def merge_files(dir, files):
+    """Merge the given memory reporter dump files into one giant file."""
+    dumps = [json.load(GzipFile(os.path.join(dir, f))) for f in files]
+
+    merged_dump = dumps[0]
+    for dump in dumps[1:]:
+        # All of the properties other than 'reports' must be identical in all
+        # dumps, otherwise we can't merge them.
+        if set(dump.keys()) != set(merged_dump.keys()):
+            print("Can't merge dumps because they don't have the "
+                  "same set of properties.")
+            return
+        for prop in merged_dump:
+            if prop != 'reports' and dump[prop] != merged_dump[prop]:
+                print("Can't merge dumps because they don't have the "
+                      "same value for property '%s'" % prop)
+
+        merged_dump['reports'] += dump['reports']
+
+    json.dump(merged_dump,
+              GzipFile(os.path.join(dir, 'merged-reports.gz'), 'w'),
+              indent=2)
 
 def remove_new_files(old_files):
     # Hopefully this command line won't get too long for ADB.
     shell('adb shell rm %s' % ' '.join(["'%s'" % f for f in list_files() - old_files]))
 
+def get_procrank_etc(dir):
+    shell('adb shell procrank > procrank', cwd=dir)
+    shell('adb shell b2g-ps > b2g-ps', cwd=dir)
+    shell('adb shell b2g-procrank > b2g-procrank', cwd=dir)
+
 def get_dumps(args):
     (master_pid, child_pids) = get_pids()
     old_files = list_files()
     send_signal(args, master_pid)
-    get_files(args, master_pid, child_pids, old_files)
+    dir = get_files(args, master_pid, child_pids, old_files)
     if args.remove_from_device:
         remove_new_files(old_files)
+    get_procrank_etc(dir)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=textwrap.dedent('''\
