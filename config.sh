@@ -52,43 +52,36 @@ case "$1" in
 "galaxy-s2")
 	echo DEVICE=galaxys2 >> .tmp-config &&
 	repo_sync $1 &&
-	(cd device/samsung/galaxys2 && ./extract-files.sh)
 	;;
 
 "galaxy-nexus")
 	echo DEVICE=maguro >> .tmp-config &&
 	repo_sync $1 &&
-	(cd device/samsung/maguro && ./download-blobs.sh)
 	;;
 
 "optimus-l5")
 	echo DEVICE=m4 >> .tmp-config &&
 	repo_sync $1 &&
-	(cd device/lge/m4 && ./extract-files.sh)
 	;;
 
 "nexus-s")
 	echo DEVICE=crespo >> .tmp-config &&
 	repo_sync $1 &&
-	(cd device/samsung/crespo && ./download-blobs.sh)
 	;;
 
 "nexus-s-4g")
 	echo DEVICE=crespo4g >> .tmp-config &&
 	repo_sync $1 &&
-	(cd device/samsung/crespo4g && ./download-blobs.sh)
 	;;
 
 "otoro"|"unagi")
 	echo DEVICE=$1 >> .tmp-config &&
 	repo_sync $1 &&
-	(cd device/qcom/$1 && ./extract-files.sh)
 	;;
 
 "pandaboard")
 	echo DEVICE=panda >> .tmp-config &&
 	repo_sync $1 &&
-	(cd device/ti/panda && ./download-blobs.sh)
 	;;
 
 "emulator")
