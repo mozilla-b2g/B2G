@@ -51,37 +51,37 @@ echo DEVICE_NAME=$1 >> .tmp-config
 case "$1" in
 "galaxy-s2")
 	echo DEVICE=galaxys2 >> .tmp-config &&
-	repo_sync $1 &&
+	repo_sync $1
 	;;
 
 "galaxy-nexus")
 	echo DEVICE=maguro >> .tmp-config &&
-	repo_sync $1 &&
+	repo_sync $1
 	;;
 
 "optimus-l5")
 	echo DEVICE=m4 >> .tmp-config &&
-	repo_sync $1 &&
+	repo_sync $1
 	;;
 
 "nexus-s")
 	echo DEVICE=crespo >> .tmp-config &&
-	repo_sync $1 &&
+	repo_sync $1
 	;;
 
 "nexus-s-4g")
 	echo DEVICE=crespo4g >> .tmp-config &&
-	repo_sync $1 &&
+	repo_sync $1
 	;;
 
 "otoro"|"unagi")
 	echo DEVICE=$1 >> .tmp-config &&
-	repo_sync $1 &&
+	repo_sync $1
 	;;
 
 "pandaboard")
 	echo DEVICE=panda >> .tmp-config &&
-	repo_sync $1 &&
+	repo_sync $1
 	;;
 
 "emulator")
