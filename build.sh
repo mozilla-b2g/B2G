@@ -49,7 +49,7 @@ function configure_device() {
             old_hash=$(cat "$hash_file")
         fi
         if [ "$old_hash" != "$new_hash" ] ; then
-            echo Blob setup script has chagned, re-running &&
+            echo Blob setup script has changed, re-running &&
             sh -c "$script" &&
             mkdir -p "$(dirname "$hash_file")" &&
             echo "$new_hash" > "$hash_file"
