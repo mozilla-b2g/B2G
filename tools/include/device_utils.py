@@ -107,7 +107,7 @@ def run_and_delete_dir_on_exception(fun, dir):
 
         try:
             # Throws if the directory is not empty.
-            os.rmdir(out_dir)
+            os.rmdir(dir)
         except OSError:
             pass
 
