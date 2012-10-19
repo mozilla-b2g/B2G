@@ -1,7 +1,8 @@
 #!/bin/bash
-B2G_HOME=$PWD
 
-. load-config.sh
+B2G_HOME=$(cd $(dirname $BASH_SOURCE); pwd)
+
+. $B2G_HOME/load-config.sh
 
 DEVICE=${DEVICE:-generic}
 
