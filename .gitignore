@@ -3,6 +3,7 @@
 .userconfig
 .var.profile
 *.swp
+*.pyc
 Adreno*
 Makefile
 abi/
