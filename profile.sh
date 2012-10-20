@@ -9,11 +9,9 @@ PROFILE_DIR=/data/local/tmp
 # of all of the b2g processes
 declare -a B2G_PIDS
 
-# The get_comms function populates B2G_COMMS as an associative array mapping
+# The get_comms function populates B2G_COMMS as an array mapping
 # pids to comms (process names). get_comms also causes B2G_PIDS to be populated.
-declare -A B2G_COMMS
-
-declare -A HELP
+declare -a B2G_COMMS
 
 ###########################################################################
 #
@@ -107,7 +105,7 @@ is_profiler_running() {
 #
 # Capture the profiling information from a given process.
 #
-HELP["capture"]="Signals, pulls, and symbolicates the profile data"
+HELP_capture="Signals, pulls, and symbolicates the profile data"
 cmd_capture() {
   cmd_signal $1
   get_comms
@@ -134,18 +132,20 @@ cmd_capture() {
 #
 # Display a brief help message for each supported command
 #
-HELP["help"]="Shows these help messages"
+HELP_help="Shows these help messages"
 cmd_help() {
   if [ "$1" == "" ]; then
     echo "Usage: ${SCRIPT_NAME} command [args]"
     echo "where command is one of:"
     for command in ${allowed_commands}; do
-      printf "  %-10s %s\n" ${command} "${HELP[${command}]}"
+      desc=HELP_${command}
+      printf "  %-11s %s\n" ${command} "${!desc}"
     done
   else
     command=$1
     if [ "${allowed_commands/*${command}*/${command}}" == "${command}" ]; then
-      printf "%-10s %s\n" ${command} "${HELP[${command}]}"
+      desc=HELP_${command}
+      printf "%-11s %s\n" ${command} "${!desc}"
     else
       echo "Unrecognized command: '${command}'"
     fi
@@ -156,7 +156,7 @@ cmd_help() {
 #
 # Show all of the profile files on the phone
 #
-HELP["ls"]="Shows the profile files on the phone"
+HELP_ls="Shows the profile files on the phone"
 cmd_ls() {
   ${ADB} shell "cd ${PROFILE_DIR}; ls -l profile_?_*.txt"
 }
@@ -165,7 +165,7 @@ cmd_ls() {
 #
 # Show all of the b2g processes which are currently running.
 #
-HELP["ps"]="Shows the B2G processes"
+HELP_ps="Shows the B2G processes"
 cmd_ps() {
   local status
   get_comms
@@ -185,7 +185,7 @@ cmd_ps() {
 #
 # Pulls the profile file from the phone
 #
-HELP["pull"]="Pulls the profile data from the phone"
+HELP_pull="Pulls the profile data from the phone"
 cmd_pull() {
   local pid=$1
   local comm=$2
@@ -275,7 +275,7 @@ cmd_pull() {
 #
 # Signal the profiler to generate the profile data
 #
-HELP["signal"]="Signal the profiler to generate profile data"
+HELP_signal="Signal the profiler to generate profile data"
 cmd_signal() {
   # Call get_comms here since we need it later. find_pid is launched in
   # a sub-shell since we want the echo'd output which means we won't
@@ -306,7 +306,7 @@ cmd_signal() {
 #
 # Start b2g with the profiler enabled.
 #
-HELP["start"]="Starts the profiler"
+HELP_start="Starts the profiler"
 cmd_start() {
   stop_b2g
   echo -n "Starting b2g with profiling enabled ..."
@@ -320,7 +320,7 @@ cmd_start() {
 #
 # Stop profiling and start b2g normally
 #
-HELP["stop"]="Stops profiling and restarts b2g normally."
+HELP_stop="Stops profiling and restarts b2g normally."
 cmd_stop() {
   stop_b2g
   echo "Restarting b2g (normally) ..."
@@ -332,7 +332,7 @@ cmd_stop() {
 # Add symbols to a captured profile using the libraries from our build
 # tree.
 #
-HELP["symbolicate"]="Add symbols to a captured profile"
+HELP_symbolicate="Add symbols to a captured profile"
 cmd_symbolicate() {
   local profile_filename=$1
   if [ -z "${profile_filename}" ]; then
