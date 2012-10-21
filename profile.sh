@@ -109,7 +109,7 @@ HELP_capture="Signals, pulls, and symbolicates the profile data"
 cmd_capture() {
   cmd_signal $1
   get_comms
-  declare -A local_filename
+  declare -a local_filename
   local timestamp=$(date +"%H%M")
   if [ "${CMD_SIGNAL_PID:0:1}" == "-" ]; then
     # We signalled the entire process group. Pull and symbolicate
