@@ -9,42 +9,33 @@
 function configure_device() {
     hash_file="$OUT/firmware.hash"
 
-    # Figure out which pieces of information are important
-    case $DEVICE in
-        galaxys2)
-            script="cd device/samsung/$DEVICE && ./extract-files.sh"
-            important_files="device/samsung/$DEVICE/extract-files.sh"
-            ;;
-        crespo|crespo4g|maguro)
-            script="cd device/samsung/$DEVICE && ./download-blobs.sh"
-            important_files="device/samsung/$DEVICE/download-blobs.sh"
-            ;;
-        otoro|unagi)
-            script="cd device/qcom/$DEVICE && ./extract-files.sh"
-            important_files="device/qcom/$DEVICE/extract-files.sh"
-            ;;
-        m4)
-            script="cd device/lge/$DEVICE && ./extract-files.sh"
-            important_files="device/lge/$DEVICE/extract-files.sh"
-            ;;
-        panda)
-            script="cd device/ti/$DEVICE && ./download-blobs.sh"
-            important_files="device/ti/$DEVICE/download-blobs.sh"
-            ;;
-        generic)
-            script=
-            important_files=
-            ;;
-        *)
-            echo "Cannot configure blobs for unknown device $DEVICE_NAME \($DEVICE\)"
-            return 1
-            ;;
-    esac
+    # Make sure that our assumption that device codenames are unique
+    # across vendors is true
+    if [ $(ls -d device/*/$DEVICE 2> /dev/null | wc -l) -gt 1 ] ; then
+        echo $DEVICE is ambiguous \"$(ls -d device/*/$DEVICE 2> /dev/null)\"
+        return 1
+    fi
+
+    # Select which blob setup script to use, if any.  We currently
+    # assume that $DEVICE maps to the filesystem location, which is true
+    # for the devices we support now (oct 2012) that do not require blobs.
+    # The emulator uses a $DEVICE of 'emulator' but its device/ directory
+    # uses the 'goldfish' name.
+    if [ -f device/*/$DEVICE/download-blobs.sh ] ; then
+        important_files="device/*/$DEVICE/download-blobs.sh"
+        script="cd device/*/$DEVICE && ./download-blobs.sh"
+    elif [ -f device/*/$DEVICE/extract-files.sh ] ; then
+        important_files="device/*/$DEVICE/extract-files.sh"
+        script="cd device/*/$DEVICE && ./extract-files.sh"
+    else
+        important_files=
+        script=
+    fi
 
     # If we have files that are important to look at, we need
     # to check if they've changed
     if [ -n "$important_files" ] ; then
-        new_hash=$(cat "$important_files" | openssl sha1)
+        new_hash=$(cat $important_files | openssl sha1)
         if [ -f "$hash_file" ] ; then
             old_hash=$(cat "$hash_file")
         fi
