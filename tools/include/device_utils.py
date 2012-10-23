@@ -7,6 +7,7 @@ import os
 import sys
 import re
 import subprocess
+import textwrap
 from time import sleep
 
 def remote_shell(cmd):
