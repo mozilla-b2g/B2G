@@ -1,6 +1,6 @@
 #!/bin/bash
 
-B2G_HOME=$(cd $(dirname $BASH_SOURCE); pwd)
+B2G_HOME=$(dirname $BASH_SOURCE)
 
 . $B2G_HOME/load-config.sh
 

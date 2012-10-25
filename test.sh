@@ -1,6 +1,6 @@
 #!/bin/bash
 
-B2G_HOME=$(cd $(dirname $BASH_SOURCE); pwd)
+B2G_HOME=$(dirname $BASH_SOURCE)
 
 usage() {
     echo "Usage: $0 [marionette|mochitest] (frontend-args)"
