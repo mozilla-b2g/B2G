@@ -23,6 +23,8 @@ import os
 import textwrap
 import argparse
 import json
+import urllib
+import subprocess
 from gzip import GzipFile
 
 import include.device_utils as utils
@@ -75,14 +77,46 @@ def get_dumps(args):
             for f in new_files:
                 os.remove(os.path.join(out_dir, f))
 
-        print()
-        print(textwrap.fill(textwrap.dedent('''\
-            To view this report, open Firefox on your desktop, load
-            about:memory, click "read reports from a file" at the bottom, and
-            open %s''' %
-            os.path.abspath(merged_reports_path))))
+        return os.path.abspath(merged_reports_path)
 
-    utils.run_and_delete_dir_on_exception(do_work, out_dir)
+    return utils.run_and_delete_dir_on_exception(do_work, out_dir)
+
+def get_and_show_dump(args):
+    merged_reports_path = get_dumps(args)
+
+    # Try to open the dump in Firefox.
+    about_memory_url = "about:memory?file=%s" % urllib.quote(merged_reports_path)
+    if args.open_in_firefox:
+        try:
+            # Open about_memory_url in Firefox, but don't display stdout or stderr.
+            # This isn't necessary if Firefox is already running (which it
+            # probably is), because in that case our |firefox| invocation will
+            # open a new tab in the existing process and then immediately exit.
+            # But if Firefox isn't already running, we don't want to pollute
+            # our terminal with its output.
+
+            # If we wanted to be platform-independent, we might be able to use
+            # "NUL" on Windows.  But the rest of this script already isn't
+            # platform-independent, so whatever.
+            fnull = open('/dev/null', 'w')
+            subprocess.Popen(['firefox', about_memory_url], stdout=fnull, stderr=fnull)
+            print()
+            print(textwrap.fill(textwrap.dedent('''\
+                I just tried to open the memory report in Firefox.  If that
+                didn't work for some reason, or if you want to open this report
+                at a later time, open the following URL in a Firefox nightly build:
+                ''')) + '\n\n  ' + about_memory_url)
+            return
+        except (subprocess.CalledProcessError, OSError):
+            pass
+
+    # If not args.open_in_firefox or if we weren't able to open in Firefox,
+    # output the message below.
+    print()
+    print(textwrap.fill(textwrap.dedent('''\
+        To view this report, open Firefox on this machine and load the
+        following URL:
+        ''')) + '\n\n  ' + about_memory_url)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__,
@@ -102,6 +136,12 @@ if __name__ == '__main__':
         action='store_true', default=False,
         help='Leave the reports on the device after pulling them.')
 
+    parser.add_argument('--no-auto-open', '-o', dest='open_in_firefox',
+        action='store_false', default=True,
+        help=textwrap.dedent("""\
+            By default, we try to open the memory report we fetch in Firefox.
+            Specify this option prevent this."""))
+
     parser.add_argument('--keep-individual-reports',
         dest='keep_individual_reports',
         action='store_true', default=False,
@@ -111,4 +151,4 @@ if __name__ == '__main__':
             except for debugging.'''))
 
     args = parser.parse_args()
-    get_dumps(args)
+    get_and_show_dump(args)

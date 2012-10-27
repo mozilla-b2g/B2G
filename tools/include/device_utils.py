@@ -119,7 +119,7 @@ def run_and_delete_dir_on_exception(fun, dir):
     You might want to wrap your call to send_signal_and_pull_files in this
     function.'''
     try:
-        fun()
+        return fun()
     except:
         # os.rmdir will throw if the directory is non-empty, and a simple
         # 'raise' will re-throw the exception from os.rmdir (if that throws),
