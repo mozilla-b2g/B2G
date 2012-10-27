@@ -11,8 +11,29 @@ import textwrap
 from time import sleep
 
 def remote_shell(cmd):
-    '''Run the given command on on the device and return stdout.'''
-    return shell("adb shell '%s'" % cmd)
+    '''Run the given command on on the device and return stdout.  Throw an
+    exception if the remote command returns a non-zero return code.
+
+    adb shell doesn't check the remote command's error code.  So to check this
+    ourselves, we echo $? after running the command and then strip that off
+    before returning the command's output.
+    
+    '''
+    out = shell(r"""adb shell '%s; echo -n "\n$?"'""" % cmd)
+
+    # The final '\n' in |out| separates the command output from the return
+    # code.  (There's no newline after the return code because we did echo -n.)
+    (cmd_out, _, retcode) = out.rpartition('\n')
+    retcode = retcode.strip()
+
+    if retcode == '0':
+        return cmd_out
+
+    print('Remote command %s failed with error code %s' % (cmd, retcode),
+          file=sys.stderr)
+    if cmd_out:
+        print(cmd_out, file=sys.stderr)
+    raise subprocess.CalledProcessError(retcode, cmd, cmd_out)
 
 def shell(cmd, cwd=None, show_errors=True):
     '''Run the given command as a shell script on the host machine.
