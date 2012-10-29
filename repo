@@ -28,10 +28,10 @@ if __name__ == '__main__':
 del magic
 
 # increment this whenever we make important changes to this script
-VERSION = (1, 17)
+VERSION = (1, 18)
 
 # increment this if the MAINTAINER_KEYS block is modified
-KEYRING_VERSION = (1,0)
+KEYRING_VERSION = (1,1)
 MAINTAINER_KEYS = """
 
      Repo Maintainer <repo@android.kernel.org>
@@ -75,12 +75,44 @@ zE3GNvmJosh6leayjtI9P2A6iEkEGBECAAkFAkj3uiACGwwACgkQFlMNXpIPXGWp
 TACbBS+Up3RpfYVfd63c1cDdlru13pQAn3NQy/SN858MkxN+zym86UBgOad2
 =CMiZ
 -----END PGP PUBLIC KEY BLOCK-----
+
+     Conley Owens <cco3@android.com>
+-----BEGIN PGP PUBLIC KEY BLOCK-----
+Version: GnuPG v1.4.11 (GNU/Linux)
+
+mQENBFBiLPwBCACvISTASOgFXwADw2GYRH2I2z9RvYkYoZ6ThTTNlMXbbYYKO2Wo
+a9LQDNW0TbCEekg5UKk0FD13XOdWaqUt4Gtuvq9c43GRSjMO6NXH+0BjcQ8vUtY2
+/W4CYUevwdo4nQ1+1zsOCu1XYe/CReXq0fdugv3hgmRmh3sz1soo37Q44W2frxxg
+U7Rz3Da4FjgAL0RQ8qndD+LwRHXTY7H7wYM8V/3cYFZV7pSodd75q3MAXYQLf0ZV
+QR1XATu5l1QnXrxgHvz7MmDwb1D+jX3YPKnZveaukigQ6hDHdiVcePBiGXmk8LZC
+2jQkdXeF7Su1ZYpr2nnEHLJ6vOLcCpPGb8gDABEBAAG0H0NvbmxleSBPd2VucyA8
+Y2NvM0BhbmRyb2lkLmNvbT6JATgEEwECACIFAlBiLPwCGwMGCwkIBwMCBhUIAgkK
+CwQWAgMBAh4BAheAAAoJEBkmlFUziHGkHVkH/2Hks2Cif5i2xPtv2IFZcjL42joU
+T7lO5XFqUYS9ZNHpGa/V0eiPt7rHoO16glR83NZtwlrq2cSN89i9HfOhMYV/qLu8
+fLCHcV2muw+yCB5s5bxnI5UkToiNZyBNqFkcOt/Kbj9Hpy68A1kmc6myVEaUYebq
+2Chx/f3xuEthan099t746v1K+/6SvQGDNctHuaMr9cWdxZtHjdRf31SQRc99Phe5
+w+ZGR/ebxNDKRK9mKgZT8wVFHlXerJsRqWIqtx1fsW1UgLgbpcpe2MChm6B5wTu0
+s1ltzox3l4q71FyRRPUJxXyvGkDLZWpK7EpiHSCOYq/KP3HkKeXU3xqHpcG5AQ0E
+UGIs/AEIAKzO/7lO9cB6dshmZYo8Vy/b7aGicThE+ChcDSfhvyOXVdEM2GKAjsR+
+rlBWbTFX3It301p2HwZPFEi9nEvJxVlqqBiW0bPmNMkDRR55l2vbWg35wwkg6RyE
+Bc5/TQjhXI2w8IvlimoGoUff4t3JmMOnWrnKSvL+5iuRj12p9WmanCHzw3Ee7ztf
+/aU/q+FTpr3DLerb6S8xbv86ySgnJT6o5CyL2DCWRtnYQyGVi0ZmLzEouAYiO0hs
+z0AAu28Mj+12g2WwePRz6gfM9rHtI37ylYW3oT/9M9mO9ei/Bc/1D7Dz6qNV+0vg
+uSVJxM2Bl6GalHPZLhHntFEdIA6EdoUAEQEAAYkBHwQYAQIACQUCUGIs/AIbDAAK
+CRAZJpRVM4hxpNfkB/0W/hP5WK/NETXBlWXXW7JPaWO2c5kGwD0lnj5RRmridyo1
+vbm5PdM91jOsDQYqRu6YOoYBnDnEhB2wL2bPh34HWwwrA+LwB8hlcAV2z1bdwyfl
+3R823fReKN3QcvLHzmvZPrF4Rk97M9UIyKS0RtnfTWykRgDWHIsrtQPoNwsXrWoT
+9LrM2v+1+9mp3vuXnE473/NHxmiWEQH9Ez+O/mOxQ7rSOlqGRiKq/IBZCfioJOtV
+fTQeIu/yASZnsLBqr6SJEGwYBoWcyjG++k4fyw8ocOAo4uGDYbxgN7yYfNQ0OH7o
+V6pfUgqKLWa/aK7/N1ZHnPdFLD8Xt0Dmy4BPwrKC
+=O7am
+-----END PGP PUBLIC KEY BLOCK-----
 """
 
 GIT = 'git'                     # our git command
 MIN_GIT_VERSION = (1, 5, 4)     # minimum supported git version
 repodir = '.repo'               # name of repo's private directory
-S_repo = 'repo'                 # special repo reposiory
+S_repo = 'repo'                 # special repo repository
 S_manifests = 'manifests'       # special manifest repository
 REPO_MAIN = S_repo + '/main.py' # main script
 
@@ -88,7 +120,6 @@ REPO_MAIN = S_repo + '/main.py' # main script
 import optparse
 import os
 import re
-import readline
 import subprocess
 import sys
 import urllib2
@@ -131,7 +162,7 @@ group.add_option('-g', '--groups',
                  metavar='GROUP')
 group.add_option('-p', '--platform',
                  dest='platform', default="auto",
-                 help='restrict manifest projects to ones with a specified'
+                 help='restrict manifest projects to ones with a specified '
                       'platform group [auto|all|none|linux|darwin|...]',
                  metavar='PLATFORM')
 
@@ -186,7 +217,7 @@ def _Init(args):
   if not os.path.isdir(repodir):
     try:
       os.mkdir(repodir)
-    except OSError, e:
+    except OSError as e:
       print >>sys.stderr, \
             'fatal: cannot make %s directory: %s' % (
             repodir, e.strerror)
@@ -197,8 +228,8 @@ def _Init(args):
 
   _CheckGitVersion()
   try:
-    if _NeedSetupGnuPG():
-      can_verify = _SetupGnuPG(opt.quiet)
+    if NeedSetupGnuPG():
+      can_verify = SetupGnuPG(opt.quiet)
     else:
       can_verify = True
 
@@ -222,7 +253,7 @@ def _CheckGitVersion():
   cmd = [GIT, '--version']
   try:
     proc = subprocess.Popen(cmd, stdout=subprocess.PIPE)
-  except OSError, e:
+  except OSError as e:
     print >>sys.stderr
     print >>sys.stderr, "fatal: '%s' is not available" % GIT
     print >>sys.stderr, 'fatal: %s' % e
@@ -247,7 +278,7 @@ def _CheckGitVersion():
     raise CloneFailure()
 
 
-def _NeedSetupGnuPG():
+def NeedSetupGnuPG():
   if not os.path.isdir(home_dot_repo):
     return True
 
@@ -265,11 +296,11 @@ def _NeedSetupGnuPG():
   return False
 
 
-def _SetupGnuPG(quiet):
+def SetupGnuPG(quiet):
   if not os.path.isdir(home_dot_repo):
     try:
       os.mkdir(home_dot_repo)
-    except OSError, e:
+    except OSError as e:
       print >>sys.stderr, \
             'fatal: cannot make %s directory: %s' % (
             home_dot_repo, e.strerror)
@@ -278,7 +309,7 @@ def _SetupGnuPG(quiet):
   if not os.path.isdir(gpg_dir):
     try:
       os.mkdir(gpg_dir, 0700)
-    except OSError, e:
+    except OSError as e:
       print >>sys.stderr, \
             'fatal: cannot make %s directory: %s' % (
             gpg_dir, e.strerror)
@@ -292,7 +323,7 @@ def _SetupGnuPG(quiet):
     proc = subprocess.Popen(cmd,
                             env = env,
                             stdin = subprocess.PIPE)
-  except OSError, e:
+  except OSError as e:
     if not quiet:
       print >>sys.stderr, 'warning: gpg (GnuPG) is not available.'
       print >>sys.stderr, 'warning: Installing it is strongly encouraged.'
@@ -393,13 +424,13 @@ def _DownloadBundle(url, local, quiet):
   try:
     try:
       r = urllib2.urlopen(url)
-    except urllib2.HTTPError, e:
+    except urllib2.HTTPError as e:
       if e.code == 404:
         return False
       print >>sys.stderr, 'fatal: Cannot get %s' % url
       print >>sys.stderr, 'fatal: HTTP error %s' % e.code
       raise CloneFailure()
-    except urllib2.URLError, e:
+    except urllib2.URLError as e:
       print >>sys.stderr, 'fatal: Cannot get %s' % url
       print >>sys.stderr, 'fatal: error %s' % e.reason
       raise CloneFailure()
@@ -428,7 +459,7 @@ def _Clone(url, local, quiet):
   """
   try:
     os.mkdir(local)
-  except OSError, e:
+  except OSError as e:
     print >>sys.stderr, \
           'fatal: cannot make %s directory: %s' \
           % (local, e.strerror)
@@ -437,7 +468,7 @@ def _Clone(url, local, quiet):
   cmd = [GIT, 'init', '--quiet']
   try:
     proc = subprocess.Popen(cmd, cwd = local)
-  except OSError, e:
+  except OSError as e:
     print >>sys.stderr
     print >>sys.stderr, "fatal: '%s' is not available" % GIT
     print >>sys.stderr, 'fatal: %s' % e
@@ -539,19 +570,19 @@ def _Checkout(cwd, branch, rev, quiet):
 def _FindRepo():
   """Look for a repo installation, starting at the current directory.
   """
-  dir = os.getcwd()
+  curdir = os.getcwd()
   repo = None
 
   olddir = None
-  while dir != '/' \
-    and dir != olddir \
+  while curdir != '/' \
+    and curdir != olddir \
     and not repo:
-    repo = os.path.join(dir, repodir, REPO_MAIN)
+    repo = os.path.join(curdir, repodir, REPO_MAIN)
     if not os.path.isfile(repo):
       repo = None
-      olddir = dir
-      dir = os.path.dirname(dir)
-  return (repo, os.path.join(dir, repodir))
+      olddir = curdir
+      curdir = os.path.dirname(curdir)
+  return (repo, os.path.join(curdir, repodir))
 
 
 class _Options:
@@ -657,13 +688,13 @@ def _SetDefaultsTo(gitdir):
 
 
 def main(orig_args):
-  main, dir = _FindRepo()
+  repo_main, rel_repo_dir = _FindRepo()
   cmd, opt, args = _ParseArguments(orig_args)
 
   wrapper_path = os.path.abspath(__file__)
   my_main, my_git = _RunSelf(wrapper_path)
 
-  if not main:
+  if not repo_main:
     if opt.help:
       _Usage()
     if cmd == 'help':
@@ -683,25 +714,25 @@ def main(orig_args):
             os.rmdir(os.path.join(root, name))
         os.rmdir(repodir)
         sys.exit(1)
-      main, dir = _FindRepo()
+      repo_main, rel_repo_dir = _FindRepo()
     else:
       _NoCommands(cmd)
 
   if my_main:
-    main = my_main
+    repo_main = my_main
 
   ver_str = '.'.join(map(lambda x: str(x), VERSION))
-  me = [main,
-        '--repo-dir=%s' % dir,
+  me = [repo_main,
+        '--repo-dir=%s' % rel_repo_dir,
         '--wrapper-version=%s' % ver_str,
         '--wrapper-path=%s' % wrapper_path,
         '--']
   me.extend(orig_args)
   me.extend(extra_args)
   try:
-    os.execv(main, me)
-  except OSError, e:
-    print >>sys.stderr, "fatal: unable to start %s" % main
+    os.execv(repo_main, me)
+  except OSError as e:
+    print >>sys.stderr, "fatal: unable to start %s" % repo_main
     print >>sys.stderr, "fatal: %s" % e
     sys.exit(148)
 
