@@ -11,7 +11,7 @@ GDBINIT=/tmp/b2g.gdbinit.$(whoami)
 GONK_OBJDIR=out/target/product/$DEVICE
 SYMDIR=$GONK_OBJDIR/symbols
 
-GDBSERVER_PID=$($ADB shell 'toolbox ps gdbserver | (read header; read user pid rest; echo $pid)')
+GDBSERVER_PID=$($ADB shell 'toolbox ps gdbserver | (read header; read user pid rest; echo -n $pid)')
 
 GDB_PORT=$((10000 + $(id -u) % 50000))
 if [ "$1" = "attach"  -a  -n "$2" ] ; then
@@ -52,7 +52,8 @@ else
    [ -n "$MOZ_PROFILER_STARTUP" ] && GDBSERVER_ENV="$GDBSERVER_ENV MOZ_PROFILER_STARTUP=$MOZ_PROFILER_STARTUP "
    [ -n "$MOZ_DEBUG_CHILD_PROCESS" ] && GDBSERVER_ENV="$GDBSERVER_ENV MOZ_DEBUG_CHILD_PROCESS=$MOZ_DEBUG_CHILD_PROCESS "
    [ -n "$MOZ_IPC_MESSAGE_LOG" ]     && GDBSERVER_ENV="$GDBSERVER_ENV MOZ_IPC_MESSAGE_LOG=$MOZ_IPC_MESSAGE_LOG "
-   $ADB shell kill $B2G_PID
+
+   [ -n "$B2G_PID" ] && $ADB shell kill $B2G_PID
    [ "$B2G_BIN" = "/system/b2g/b2g" ] && $ADB shell stop b2g
    $ADB shell LD_LIBRARY_PATH=/system/b2g LD_PRELOAD=/system/b2g/libmozglue.so TMPDIR=/data/local/tmp $GDBSERVER_ENV gdbserver --multi :$GDB_PORT $B2G_BIN $@ &
 fi
