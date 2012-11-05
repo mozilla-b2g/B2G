@@ -1,6 +1,7 @@
 #!/bin/bash
 
-B2G_HOME=$(dirname $BASH_SOURCE)
+# Get full path from where the script was executed, full path is needed to run emulator succesfully
+B2G_HOME=$(cd $(dirname $BASH_SOURCE); pwd)
 
 . $B2G_HOME/load-config.sh
 
