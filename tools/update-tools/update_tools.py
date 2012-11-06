@@ -30,7 +30,7 @@ import zipfile
 # This needs to be run from within a B2G checkout
 this_dir = os.path.abspath(os.path.dirname(__file__))
 b2g_dir = os.path.dirname(os.path.dirname(this_dir))
-prebuilt_dir = os.path.join(this_dir, "prebuilt")
+bin_dir = os.path.join(this_dir, "bin")
 
 def validate_env(parser):
     if platform.system() not in ("Linux", "Darwin"):
@@ -110,7 +110,7 @@ class PrebuiltTool(object):
         if platform.system() == "Darwin":
             host_dir = "darwin-x86"
 
-        self.tool = os.path.join(prebuilt_dir, host_dir, name)
+        self.tool = os.path.join(bin_dir, host_dir, name)
         if not os.path.exists(self.tool):
             raise Exception("Couldn't find %s " % self.tool)
 
@@ -204,15 +204,27 @@ class FotaZip(zipfile.ZipFile):
         if signed:
             entries += (self.MANIFEST_MF, self.CERT_SF)
 
-        if not all(map(self.has_entry, entries)):
-            raise Exception("Update zip is missing expected file: %s" % entry)
+        for entry in entries:
+            if not self.has_entry(entry):
+                raise Exception("Update zip is missing expected file: %s" % entry)
 
 class FotaZipBuilder(object):
     def build_unsigned_zip(self, update_dir, output_zip):
         if not os.path.exists(update_dir):
             raise Exception("Update dir doesn't exist: %s" % update_dir)
 
+        update_binary = os.path.join(update_dir, FotaZip.UPDATE_BINARY)
+        updater_script = os.path.join(update_dir, FotaZip.UPDATER_SCRIPT)
+        if not os.path.exists(updater_script):
+            raise Exception("updater-script not found at %s" % updater_script)
+
         update_zipfile = zipfile.ZipFile(output_zip, "w", zipfile.ZIP_DEFLATED)
+
+        if not os.path.exists(update_binary):
+            prebuilt_update_binary = os.path.join(bin_dir, "gonk", "update-binary")
+            print "Warning: update-binary not found, adding to zip from %s" % \
+                  prebuilt_update_binary
+            update_zipfile.write(prebuilt_update_binary, FotaZip.UPDATE_BINARY)
 
         for root, dirs, files in os.walk(update_dir):
             for name in files:
@@ -236,7 +248,7 @@ class FotaZipBuilder(object):
         if not os.path.exists(public_key):
             raise Exception("Public key doesn't exist: %s" % public_key)
 
-        signapk_jar = os.path.join(prebuilt_dir, "signapk.jar")
+        signapk_jar = os.path.join(bin_dir, "signapk.jar")
 
         run_command([java, "-Xmx2048m", "-jar", signapk_jar,
             "-w", public_key, private_key, unsigned_zip, output_zip])
@@ -249,9 +261,21 @@ class FotaMarBuilder(object):
         shutil.rmtree(self.stage_dir)
 
     def find_gecko_dir(self):
-        return run_command(["bash", "-c",
-                            ". load-config.sh; echo -n $GECKO_PATH"],
-                            cwd=b2g_dir, env={"B2G_DIR": b2g_dir})
+        gecko_dir = run_command(["bash", "-c",
+                                 ". load-config.sh; echo -n $GECKO_PATH"],
+                                 cwd=b2g_dir, env={"B2G_DIR": b2g_dir})
+
+        if len(gecko_dir) == 0:
+            gecko_dir = os.path.join(b2g_dir, "gecko")
+
+        if os.path.exists(gecko_dir):
+            return gecko_dir
+
+        relative_gecko_dir = os.path.join(b2g_dir, gecko_dir)
+        if os.path.exists(relative_gecko_dir):
+            return relative_gecko_dir
+
+        raise Exception("B2G gecko directory not found: %s" % gecko_dir)
 
     def build_mar(self, signed_zip, output_mar):
         with FotaZip(signed_zip) as fota_zip:
@@ -452,7 +476,7 @@ class UpdateXmlOptions(argparse.ArgumentParser):
 class TestUpdate(object):
     REMOTE_BIN_DIR     = "/data/local/bin"
     REMOTE_BUSYBOX     = REMOTE_BIN_DIR + "/busybox"
-    LOCAL_BUSYBOX      = os.path.join(prebuilt_dir, "gonk", "busybox-armv6l")
+    LOCAL_BUSYBOX      = os.path.join(bin_dir, "gonk", "busybox-armv6l")
     REMOTE_HTTP_ROOT   = "/data/local/b2g-updates"
     REMOTE_PROFILE_DIR = "/data/b2g/mozilla"
     UPDATE_URL         = "http://localhost/update.xml"
