@@ -15,7 +15,7 @@
 # APIs for building and testing OTA and FOTA updates for FxOS
 
 import hashlib
-import optparse
+import argparse
 import os
 import platform
 import re
@@ -30,10 +30,17 @@ import zipfile
 # This needs to be run from within a B2G checkout
 this_dir = os.path.abspath(os.path.dirname(__file__))
 b2g_dir = os.path.dirname(os.path.dirname(this_dir))
-
-# TODO pull this from load-config.sh / GECKO_PATH
-gecko_dir = os.path.join(b2g_dir, "gecko")
 prebuilt_dir = os.path.join(this_dir, "prebuilt")
+
+def validate_env(parser):
+    if platform.system() not in ("Linux", "Darwin"):
+        parser.error("This tool only runs in Linux or Mac OS X")
+
+    if not which("bash"):
+        parser.error("This tool requires bash to be on your PATH")
+
+    if sys.version_info < (2, 7):
+        parser.error("This tool requires Python 2.7 or greater")
 
 def run_command(*args, **kwargs):
     try:
@@ -41,6 +48,61 @@ def run_command(*args, **kwargs):
     except subprocess.CalledProcessError, e:
         raise Exception("Process returned error code %d: %s" % \
                         (e.returncode, " ".join(e.cmd)))
+
+# Copied from Lib/shutil.py in Python 3.3.0
+# http://docs.python.org/3/license.html
+def which(cmd, mode=os.F_OK | os.X_OK, path=None):
+    """Given a command, mode, and a PATH string, return the path which
+    conforms to the given mode on the PATH, or None if there is no such
+    file.
+
+    `mode` defaults to os.F_OK | os.X_OK. `path` defaults to the result
+    of os.environ.get("PATH"), or can be overridden with a custom search
+    path.
+
+    """
+    # Check that a given file can be accessed with the correct mode.
+    # Additionally check that `file` is not a directory, as on Windows
+    # directories pass the os.access check.
+    def _access_check(fn, mode):
+        return (os.path.exists(fn) and os.access(fn, mode)
+                and not os.path.isdir(fn))
+
+    # Short circuit. If we're given a full path which matches the mode
+    # and it exists, we're done here.
+    if _access_check(cmd, mode):
+        return cmd
+
+    path = (path or os.environ.get("PATH", os.defpath)).split(os.pathsep)
+
+    if sys.platform == "win32":
+        # The current directory takes precedence on Windows.
+        if not os.curdir in path:
+            path.insert(0, os.curdir)
+
+        # PATHEXT is necessary to check on Windows.
+        pathext = os.environ.get("PATHEXT", "").split(os.pathsep)
+        # See if the given file matches any of the expected path extensions.
+        # This will allow us to short circuit when given "python.exe".
+        matches = [cmd for ext in pathext if cmd.lower().endswith(ext.lower())]
+        # If it does match, only test that one, otherwise we have to try
+        # others.
+        files = [cmd] if matches else [cmd + ext.lower() for ext in pathext]
+    else:
+        # On other platforms you don't have things like PATHEXT to tell you
+        # what file suffixes are executable, so just pass on cmd as-is.
+        files = [cmd]
+
+    seen = set()
+    for dir in path:
+        dir = os.path.normcase(dir)
+        if not dir in seen:
+            seen.add(dir)
+            for thefile in files:
+                name = os.path.join(dir, thefile)
+                if _access_check(name, mode):
+                    return name
+    return None
 
 class PrebuiltTool(object):
     def __init__(self, name):
@@ -85,15 +147,21 @@ class AdbTool(PrebuiltTool):
                             remote_file)
         return result.strip() == "0"
 
-    def get_pid(self, process):
+    def get_pids(self, process):
         result = self.shell(
-            "toolbox ps %s | (read header; read user pid rest; echo -n $pid)" % \
+            "toolbox ps %s | (read header; while read user pid rest; do echo $pid; done)" % \
                 process)
 
-        pid = result.strip()
-        if len(pid) == 0:
-            return None
-        return pid
+        return [line.strip() for line in result.splitlines()]
+
+    def get_cmdline(self, pid):
+        cmdline_path = "/proc/%s/cmdline" % pid
+        if not self.file_exists(cmdline_path):
+            raise Exception("Command line file for PID %s not found" % pid)
+
+        result = self.shell("cat %s" % cmdline_path)
+        # cmdline is null byte separated and has a trailing null byte
+        return result.split("\x00")[:-1]
 
 class MarTool(PrebuiltTool):
     def __init__(self):
@@ -155,9 +223,8 @@ class FotaZipBuilder(object):
         update_zipfile.close()
 
     def sign_zip(self, unsigned_zip, public_key, private_key, output_zip):
-        try:
-            java = subprocess.check_output(["which", "java"]).strip()
-        except subprocess.CalledProcessError, e:
+        java = which("java")
+        if java is None:
             raise Exception("java is required to be on your PATH for signing")
 
         with FotaZip(unsigned_zip) as fota_zip:
@@ -181,12 +248,17 @@ class FotaMarBuilder(object):
     def __del__(self):
         shutil.rmtree(self.stage_dir)
 
+    def find_gecko_dir(self):
+        return run_command(["bash", "-c",
+                            ". load-config.sh; echo -n $GECKO_PATH"],
+                            cwd=b2g_dir, env={"B2G_DIR": b2g_dir})
+
     def build_mar(self, signed_zip, output_mar):
         with FotaZip(signed_zip) as fota_zip:
             fota_zip.validate(signed=True)
 
         mar_tool = MarTool()
-        make_full_update = os.path.join(gecko_dir, "tools",
+        make_full_update = os.path.join(self.find_gecko_dir(), "tools",
             "update-packaging", "make_full_update.sh")
         if not os.path.exists(make_full_update):
             raise Exception("Couldn't find %s " % make_full_update)
@@ -278,48 +350,50 @@ class UpdateXmlBuilder(object):
 
         return self.doc.toprettyxml()
 
-class UpdateXmlOptions(optparse.OptionParser):
-    def __init__(self):
-        optparse.OptionParser.__init__(self, usage="%prog [options] (update.mar)")
-        self.add_option("-c", "--complete-mar", dest="complete_mar", metavar="MAR",
+class UpdateXmlOptions(argparse.ArgumentParser):
+    def __init__(self, output_arg=True):
+        argparse.ArgumentParser.__init__(self, usage="%(prog)s [options] (update.mar)")
+        self.add_argument("-c", "--complete-mar", dest="complete_mar", metavar="MAR",
             default=None, help="Path to a 'complete' MAR. This can also be " +
                                "provided as the first argument. Either " +
                                "--complete-mar or --partial-mar must be provided.")
 
-        self.add_option("-p", "--partial-mar", dest="partial_mar", metavar="MAR",
+        self.add_argument("-p", "--partial-mar", dest="partial_mar", metavar="MAR",
             default=None, help="Path to a 'partial' MAR")
 
-        self.add_option("-o", "--output", dest="output", metavar="FILE",
-            default=None, help="Place to generate the update XML. Default: " +
-                               "print XML to stdout")
+        if output_arg:
+            self.add_argument("-o", "--output", dest="output", metavar="FILE",
+                default=None, help="Place to generate the update XML. Default: " +
+                                   "print XML to stdout")
 
-        self.add_option("-u", "--url-template", dest="url_template", metavar="URL",
+        self.add_argument("-u", "--url-template", dest="url_template", metavar="URL",
             default=None, help="A template for building URLs in the update.xml. " +
-                               "Default: http://localhost/%(patch_name)s")
+                               "Default: http://localhost/[patch_name]")
 
-        self.add_option("-t", "--update-type", dest="update_type",
+        self.add_argument("-t", "--update-type", dest="update_type",
             default="minor", help="The update type. Default: minor")
 
-        self.add_option("-v", "--app-version", dest="app_version",
+        self.add_argument("-v", "--app-version", dest="app_version",
             default=None, help="The application version of this update. " +
                                "Default: 99.0")
-        self.add_option("-V", "--platform-version", dest="platform_version",
+        self.add_argument("-V", "--platform-version", dest="platform_version",
             default=None, help="The platform version of this update. Default: 99.0")
 
-        self.add_option("-l", "--license-url", dest="license_url",
+        self.add_argument("-l", "--license-url", dest="license_url",
             default=None, help="The license URL of this update. Default: " +
                                 UpdateXmlBuilder.DEFAULT_LICENSE_URL)
-        self.add_option("-d", "--details-url", dest="details_url",
+        self.add_argument("-d", "--details-url", dest="details_url",
             default=None, help="The details URL of this update. Default: " +
                                 UpdateXmlBuilder.DEFAULT_DETAILS_URL)
 
-        self.add_option("-O", "--fota-update", dest="fota_update",
+        self.add_argument("-O", "--fota-update", dest="fota_update",
             action="store_true", default=None,
             help="The complete MAR contains a FOTA update. " +
                  "Default: detect.\nNote: only 'complete' MARs can be FOTA updates.")
 
     def parse_args(self):
-        options, args = optparse.OptionParser.parse_args(self)
+        validate_env(self)
+        options, args = argparse.ArgumentParser.parse_known_args(self)
         if not options.complete_mar and len(args) > 0:
             options.complete_mar = args[0]
 
@@ -429,8 +503,16 @@ class TestUpdate(object):
 
         self.adb.push(self.stage_dir, self.REMOTE_HTTP_ROOT)
 
+    def get_busybox_httpd_pid(self):
+        pids = self.adb.get_pids("busybox")
+        for pid in pids:
+            cmdline = self.adb.get_cmdline(pid)
+            if len(cmdline) > 1 and cmdline[1] == "httpd":
+                return pid
+        return None
+
     def start_http_server(self):
-        busybox_pid = self.adb.get_pid("busybox")
+        busybox_pid = self.get_busybox_httpd_pid()
         if busybox_pid is not None:
             print "Busybox HTTP server already running, PID: %s" % busybox_pid
             return
@@ -439,7 +521,7 @@ class TestUpdate(object):
         self.adb.shell(self.REMOTE_BUSYBOX,
             "httpd", "-h", self.REMOTE_HTTP_ROOT)
 
-        busybox_pid = self.adb.get_pid("busybox")
+        busybox_pid = self.get_busybox_httpd_pid()
         if busybox_pid is not None:
             print "Busybox HTTP server now running. Root: %s, PID: %s" % \
                 (self.REMOTE_HTTP_ROOT, busybox_pid)
@@ -448,14 +530,9 @@ class TestUpdate(object):
             sys.exit(1)
 
     def override_update_url(self):
-        result = self.adb.shell("ls", "-l", self.REMOTE_PROFILE_DIR)
-        profile_dir = None
-        for line in result.splitlines():
-            match = re.search(r"([^ ]+\.default)", line)
-            if not match: continue
-            profile_dir = self.REMOTE_PROFILE_DIR + "/" + match.group(1)
-
-        if not profile_dir:
+        profile_dir = self.adb.shell("echo -n %s/*.default" % \
+                                     self.REMOTE_PROFILE_DIR)
+        if "*" in profile_dir:
             raise Exception("Unable to find profile dir in %s" % \
                             self.REMOTE_PROFILE_DIR)
 

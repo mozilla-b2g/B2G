@@ -25,8 +25,7 @@ import sys
 from update_tools import UpdateXmlOptions, TestUpdate
 
 def main():
-    options = UpdateXmlOptions()
-    options.remove_option("--output")
+    options = UpdateXmlOptions(output_arg=False)
     options.parse_args()
 
     try:

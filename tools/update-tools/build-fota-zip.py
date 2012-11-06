@@ -16,7 +16,7 @@
 #
 # Build FOTA update zips for testing. Production zips should be built w/ AOSP tools.
 
-import optparse
+import argparse
 import os
 import sys
 import tempfile
@@ -30,7 +30,8 @@ def build_fota_zip(update_dir, public_key, private_key, output_zip):
         unsigned_zip = os.path.join(stage_dir, "update-unsigned.zip")
 
         builder.build_unsigned_zip(update_dir, unsigned_zip)
-        print "Public key: %s\nPrivate key: %s" % (public_key, private_key)
+        print "Public key: %s" % public_key
+        print "Private key: %s" % private_key
 
         builder.sign_zip(unsigned_zip, public_key, private_key, output_zip)
         print "FOTA Update ZIP generated: %s" % output_zip
@@ -39,26 +40,27 @@ def build_fota_zip(update_dir, public_key, private_key, output_zip):
         sys.exit(1)
 
 def main():
-    parser = optparse.OptionParser(usage="%prog [options] update-dir",
+    parser = argparse.ArgumentParser(usage="%(prog)s [options] update-dir",
         epilog="Note: java is required to be on your PATH to sign the update.zip")
 
-    parser.add_option("-d", "--dev-key", dest="dev_key", metavar="KEYNAME",
+    parser.add_argument("-d", "--dev-key", dest="dev_key", metavar="KEYNAME",
         default="testkey",
         help="Use the named dev key pair in build/target/product/security. " +
              "Possible keys: media, platform, shared, testkey. Default: testkey")
 
-    parser.add_option("-k", "--private-key", dest="private_key",
+    parser.add_argument("-k", "--private-key", dest="private_key",
         metavar="PRIVATE_KEY", default=None,
         help="Private key used for signing the update.zip. Overrides --dev-key.")
 
-    parser.add_option("-K", "--public-key", dest="public_key",
+    parser.add_argument("-K", "--public-key", dest="public_key",
         metavar="PUBLIC_KEY", default=None,
         help="Public key used for signing the update.zip. Overrides --dev-key.")
 
-    parser.add_option("-o", "--output", dest="output", metavar="ZIP",
+    parser.add_argument("-o", "--output", dest="output", metavar="ZIP",
         help="Output to ZIP. Default: update-dir.zip", default=None)
 
-    options, args = parser.parse_args()
+    update_tools.validate_env(parser)
+    options, args = parser.parse_known_args()
     if len(args) == 0:
         parser.print_help()
         print >>sys.stderr, "Error: update-dir not specified"
