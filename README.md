@@ -158,3 +158,4 @@ To run specific tests (individual files, directories, or ini files):
 Specify the full path if you're using a different Gecko repo:
 
     ./test.sh /path/to/mozilla-central/dom/battery/test/marionette/test_battery.py
+
