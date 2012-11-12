@@ -107,7 +107,15 @@ is_profiler_running() {
 #
 HELP_capture="Signals, pulls, and symbolicates the profile data"
 cmd_capture() {
+  # Send the signal right away. If the profiler wasn't started we'll catch
+  # that later.
   cmd_signal $1
+  # Verify that b2g was started with the profiler enabled
+  if ! is_profiler_running $(get_b2g_pid); then
+    echo "Profiler doesn't seem to be running"
+    echo "Did you start the profiler using ${SCRIPT_NAME} start ?"
+    exit 1
+  fi
   get_comms
   declare -a local_filename
   local timestamp=$(date +"%H%M")
@@ -223,7 +231,7 @@ cmd_pull() {
   if [ "${profile_filename}" == "${profile_pattern}" ]; then
     echo
     echo "Profiler doesn't seem to have created file: '${profile_pattern}'"
-    echo "Did you build with B2G_PROF=1 in your .userconfig ?"
+    echo "Did you start the profiler using ${SCRIPT_NAME} start ?"
     exit 1
   fi
   local prev_ls
