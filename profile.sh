@@ -28,7 +28,7 @@ clear_pids() {
 # PIDs which are associated with a b2g process)
 #
 find_pid() {
-  local search=$1
+  local search="$1"
   get_comms
   for pid in ${B2G_PIDS[*]}; do
     if [ "${search}" == "${pid}" -o "${search}" == "${B2G_COMMS[${pid}]}" ]; then
@@ -79,7 +79,7 @@ get_comms() {
   for pid in ${B2G_PIDS[*]}; do
     # adb shell seems to replace the \n with a \r, so we use
     # tr to strip trailing newlines or CRs
-    B2G_COMMS[${pid}]=$(${ADB} shell cat /proc/${pid}/comm | tr -d '\r\n')
+    B2G_COMMS[${pid}]="$(${ADB} shell cat /proc/${pid}/comm | tr -d '\r\n')"
   done
 }
 
@@ -109,7 +109,7 @@ HELP_capture="Signals, pulls, and symbolicates the profile data"
 cmd_capture() {
   # Send the signal right away. If the profiler wasn't started we'll catch
   # that later.
-  cmd_signal $1
+  cmd_signal "$1"
   # Verify that b2g was started with the profiler enabled
   if ! is_profiler_running $(get_b2g_pid); then
     echo "Profiler doesn't seem to be running"
@@ -123,16 +123,16 @@ cmd_capture() {
     # We signalled the entire process group. Pull and symbolicate
     # each file
     for pid in ${B2G_PIDS[*]}; do
-      cmd_pull ${pid} ${B2G_COMMS[${pid}]} ${timestamp}
-      local_filename[${pid}]=${CMD_PULL_LOCAL_FILENAME}
+      cmd_pull ${pid} "${B2G_COMMS[${pid}]}" ${timestamp}
+      local_filename[${pid}]="${CMD_PULL_LOCAL_FILENAME}"
     done
     echo
-    for filename in ${local_filename[*]}; do
-      cmd_symbolicate ${filename}
+    for filename in "${local_filename[@]}"; do
+      cmd_symbolicate "${filename}"
     done
   else
-    cmd_pull ${CMD_SIGNAL_PID} ${B2G_COMMS[${CMD_SIGNAL_PID}]}
-    cmd_symbolicate ${CMD_PULL_LOCAL_FILENAME}
+    cmd_pull ${CMD_SIGNAL_PID} "${B2G_COMMS[${CMD_SIGNAL_PID}]}"
+    cmd_symbolicate "${CMD_PULL_LOCAL_FILENAME}"
   fi
 }
 
@@ -275,8 +275,8 @@ cmd_pull() {
   fi
 
   echo "Pulling ${profile_filename} into ${local_filename}"
-  ${ADB} pull ${profile_filename} ${local_filename}
-  CMD_PULL_LOCAL_FILENAME=${local_filename}
+  ${ADB} pull ${profile_filename} "${local_filename}"
+  CMD_PULL_LOCAL_FILENAME="${local_filename}"
 }
 
 ###########################################################################
@@ -297,7 +297,7 @@ cmd_signal() {
     pid=-$(find_pid b2g)
     echo "Signalling Process Group: ${pid:1} ${B2G_COMMS[${pid:1}]} ..."
   else
-    pid=$(find_pid $1)
+    pid=$(find_pid "$1")
     if [ "${pid}" == "" ]; then
       echo "Must specify a PID or process-name to capture"
       cmd_ps
@@ -342,7 +342,7 @@ cmd_stop() {
 #
 HELP_symbolicate="Add symbols to a captured profile"
 cmd_symbolicate() {
-  local profile_filename=$1
+  local profile_filename="$1"
   if [ -z "${profile_filename}" ]; then
     echo "Expecting the filename containing the profile data"
     exit 1
@@ -361,9 +361,9 @@ cmd_symbolicate() {
   fi
   source ${var_profile}
 
-  local sym_filename=${profile_filename%.*}.sym
+  local sym_filename="${profile_filename%.*}.sym"
   echo "Adding symbols to ${profile_filename} and creating ${sym_filename} ..."
-  ./scripts/profile-symbolicate.py -o ${sym_filename} ${profile_filename}
+  ./scripts/profile-symbolicate.py -o "${sym_filename}" "${profile_filename}"
 }
 
 ###########################################################################
