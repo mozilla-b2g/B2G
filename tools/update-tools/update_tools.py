@@ -122,17 +122,15 @@ class B2GConfig(object):
         if len(lines) != len(self.CONFIG_VARS):
             raise Exception("Wrong number of config vars: %d" % len(lines))
 
-        i = 0
-        for var in self.CONFIG_VARS:
-            setattr(self, var.lower(), lines[i].strip())
-            i += 1
+        for i in range(len(self.CONFIG_VARS)):
+            setattr(self, self.CONFIG_VARS[i].lower(), lines[i].strip())
 
         self.init_gecko_path()
         if not self.gecko_objdir:
             self.gecko_objdir = os.path.join(self.gecko_path, "objdir-gecko")
 
     def init_gecko_path(self):
-        if not self.gecko_path or len(self.gecko_path) == 0:
+        if not self.gecko_path:
             self.gecko_path = os.path.join(b2g_dir, "gecko")
 
         if os.path.exists(self.gecko_path):
