@@ -104,28 +104,76 @@ def which(cmd, mode=os.F_OK | os.X_OK, path=None):
                     return name
     return None
 
-class PrebuiltTool(object):
-    def __init__(self, name):
+class B2GConfig(object):
+    CONFIG_VARS = ("GECKO_PATH", "GECKO_OBJDIR")
+
+    def __init__(self):
+        shell = ". load-config.sh"
+        for var in self.CONFIG_VARS:
+            shell += "\necho $%s" % var
+
+        result = run_command(["bash", "-c", shell], cwd=b2g_dir,
+                             env={"B2G_DIR": b2g_dir})
+
+        if not result:
+            raise Exception("Couldn't parse result of load-config.sh")
+
+        lines = result.splitlines()
+        if len(lines) != len(self.CONFIG_VARS):
+            raise Exception("Wrong number of config vars: %d" % len(lines))
+
+        for i in range(len(self.CONFIG_VARS)):
+            setattr(self, self.CONFIG_VARS[i].lower(), lines[i].strip())
+
+        self.init_gecko_path()
+        if not self.gecko_objdir:
+            self.gecko_objdir = os.path.join(self.gecko_path, "objdir-gecko")
+
+    def init_gecko_path(self):
+        if not self.gecko_path:
+            self.gecko_path = os.path.join(b2g_dir, "gecko")
+
+        if os.path.exists(self.gecko_path):
+            return
+
+        relative_gecko_path = os.path.join(b2g_dir, self.gecko_path)
+        if os.path.exists(relative_gecko_path):
+            self.gecko_path = relative_gecko_path
+            return
+
+        raise Exception("B2G gecko directory not found: %s" % self.gecko_path)
+
+    def get_gecko_host_bin(self, path):
+        return os.path.join(self.gecko_objdir, "dist", "host", "bin", path)
+
+class Tool(object):
+    def __init__(self, path, prebuilt=False):
+        self.tool = path
+        if prebuilt:
+            self.init_prebuilt(path)
+
+        if not os.path.exists(self.tool):
+            raise Exception("Couldn't find %s " % self.tool)
+
+    def init_prebuilt(self, path):
         host_dir = "linux-x86"
         if platform.system() == "Darwin":
             host_dir = "darwin-x86"
 
-        self.tool = os.path.join(bin_dir, host_dir, name)
-        if not os.path.exists(self.tool):
-            raise Exception("Couldn't find %s " % self.tool)
+        self.tool = os.path.join(bin_dir, host_dir, path)
 
     def get_tool(self):
         return self.tool
 
-    def run(self, *args):
-        return run_command((self.tool,) + args)
+    def run(self, *args, **kwargs):
+        return run_command((self.tool,) + args, **kwargs)
 
-class AdbTool(PrebuiltTool):
+class AdbTool(Tool):
     DEVICE   = ("-d")
     EMULATOR = ("-e")
 
     def __init__(self, device=None):
-        PrebuiltTool.__init__(self, "adb")
+        Tool.__init__(self, "adb", prebuilt=True)
         self.adb_args = ()
         if device in (self.DEVICE, self.EMULATOR):
             self.adb_args = device
@@ -134,7 +182,7 @@ class AdbTool(PrebuiltTool):
 
     def run(self, *args):
         adb_args = self.adb_args + args
-        return PrebuiltTool.run(self, *adb_args)
+        return Tool.run(self, *adb_args)
 
     def shell(self, *args):
         return self.run("shell", *args)
@@ -163,9 +211,9 @@ class AdbTool(PrebuiltTool):
         # cmdline is null byte separated and has a trailing null byte
         return result.split("\x00")[:-1]
 
-class MarTool(PrebuiltTool):
+class MarTool(Tool):
     def __init__(self):
-        PrebuiltTool.__init__(self, "mar")
+        Tool.__init__(self, b2g_config.get_gecko_host_bin("mar"))
 
     def list_entries(self, mar_path):
         result = self.run("-t", mar_path)
@@ -177,12 +225,79 @@ class MarTool(PrebuiltTool):
             entries.append(words[2])
         return entries
 
+    def create(self, mar_path, src_dir=None):
+        if not src_dir:
+            src_dir = os.getcwd()
+
+        mar_args = ["-c", mar_path]
+
+        # The MAR tool wants a listing of each file to add
+        for root, dirs, files in os.walk(src_dir):
+            for f in files:
+                file_path = os.path.join(root, f)
+                mar_args.append(os.path.relpath(file_path, src_dir))
+
+        self.run(*mar_args, cwd=src_dir)
+
+    def extract(self, mar_path, dest_dir=None):
+        self.run("-x", mar_path, cwd=dest_dir)
+
     def is_gecko_mar(self, mar_path):
         return not self.is_fota_mar(mar_path)
 
     def is_fota_mar(self, mar_path):
         entries = self.list_entries(mar_path)
         return "update.zip" in entries
+
+class BZip2Mar(object):
+    def __init__(self, mar_file, verbose=False):
+        self.mar_file = mar_file
+        self.verbose = verbose
+        self.mar_tool = MarTool()
+        self.bzip2_tool = which("bzip2")
+        if not self.bzip2_tool:
+            raise Exception("Couldn't find bzip2 on the PATH")
+
+    def bzip2(self, *args):
+        bzargs = [self.bzip2_tool]
+        if self.verbose:
+            bzargs.append("-v")
+        bzargs.extend(args)
+
+        return run_command(bzargs)
+
+    def create(self, src_dir):
+        if not os.path.exists(src_dir):
+            raise Exception("Source directory doesn't exist: %s" % src_dir)
+
+        temp_dir = tempfile.mkdtemp()
+        for root, dirs, files in os.walk(src_dir):
+            for f in files:
+                path = os.path.join(root, f)
+                rel_file = os.path.relpath(path, src_dir)
+                out_file = os.path.join(temp_dir, rel_file)
+                out_dir = os.path.dirname(out_file)
+                if not os.path.exists(out_dir):
+                    os.makedirs(out_dir)
+
+                shutil.copy(path, out_file)
+                self.bzip2("-z", out_file)
+                os.rename(out_file + ".bz2", out_file)
+
+        self.mar_tool.create(self.mar_file, src_dir=temp_dir)
+
+    def extract(self, dest_dir):
+        if not os.path.exists(dest_dir):
+            os.makedirs(dest_dir)
+            if not os.path.exists(dest_dir):
+                raise Exception("Couldn't create directory: %s" % dest_dir)
+
+        self.mar_tool.extract(self.mar_file, dest_dir=dest_dir)
+        for root, dirs, files in os.walk(dest_dir):
+            for f in files:
+                path = os.path.join(root, f)
+                os.rename(path, path + ".bz2")
+                self.bzip2("-d", path + ".bz2")
 
 class FotaZip(zipfile.ZipFile):
     UPDATE_BINARY  = "META-INF/com/google/android/update-binary"
@@ -260,29 +375,12 @@ class FotaMarBuilder(object):
     def __del__(self):
         shutil.rmtree(self.stage_dir)
 
-    def find_gecko_dir(self):
-        gecko_dir = run_command(["bash", "-c",
-                                 ". load-config.sh; echo -n $GECKO_PATH"],
-                                 cwd=b2g_dir, env={"B2G_DIR": b2g_dir})
-
-        if len(gecko_dir) == 0:
-            gecko_dir = os.path.join(b2g_dir, "gecko")
-
-        if os.path.exists(gecko_dir):
-            return gecko_dir
-
-        relative_gecko_dir = os.path.join(b2g_dir, gecko_dir)
-        if os.path.exists(relative_gecko_dir):
-            return relative_gecko_dir
-
-        raise Exception("B2G gecko directory not found: %s" % gecko_dir)
-
     def build_mar(self, signed_zip, output_mar):
         with FotaZip(signed_zip) as fota_zip:
             fota_zip.validate(signed=True)
 
         mar_tool = MarTool()
-        make_full_update = os.path.join(self.find_gecko_dir(), "tools",
+        make_full_update = os.path.join(b2g_config.gecko_path, "tools",
             "update-packaging", "make_full_update.sh")
         if not os.path.exists(make_full_update):
             raise Exception("Couldn't find %s " % make_full_update)
@@ -298,6 +396,34 @@ class FotaMarBuilder(object):
 
         run_command([make_full_update, output_mar, mar_dir],
             env={"MAR": mar_tool.get_tool()})
+
+class GeckoMarBuilder(object):
+    def __init__(self):
+        self.mar_tool = MarTool()
+        self.mbsdiff_tool = Tool(b2g_config.get_gecko_host_bin("mbsdiff"))
+        packaging_dir = os.path.join(b2g_config.gecko_path, "tools",
+            "update-packaging")
+
+        self.make_full_update = os.path.join(packaging_dir,
+            "make_full_update.sh")
+        if not os.path.exists(self.make_full_update):
+            raise Exception("Couldn't find %s " % make_full_update)
+
+        self.make_incremental_update = os.path.join(packaging_dir,
+            "make_incremental_update.sh")
+        if not os.path.exists(self.make_incremental_update):
+            raise Exception("Couldn't find %s " % make_incremental_update)
+
+    def build_gecko_mar(self, src_dir, output_mar, from_dir=None):
+        if from_dir:
+            args = [self.make_incremental_update, output_mar, from_dir, src_dir]
+        else:
+            args = [self.make_full_update, output_mar, src_dir]
+
+        run_command(args, env={
+            "MAR": self.mar_tool.get_tool(),
+            "MBSDIFF": self.mbsdiff_tool.get_tool()
+        })
 
 class UpdateXmlBuilder(object):
     DEFAULT_URL_TEMPLATE = "http://localhost/%(patch_name)s"
@@ -570,3 +696,5 @@ class TestUpdate(object):
     def restart_b2g(self):
         print "Restarting B2G"
         self.adb.shell("stop b2g; start b2g")
+
+b2g_config = B2GConfig()
