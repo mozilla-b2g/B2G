@@ -132,6 +132,15 @@ class Library:
     elif self.target_name in gSpecialLibs:
       self.symbol_table = gSpecialLibs[self.target_name]
       self.symbol_table_addresses = sorted(self.symbol_table.keys())
+    elif self.target_name[:1] == "/": # Absolute paths.
+      basename = os.path.basename(self.target_name)
+      dirname = os.path.dirname(self.target_name)
+      lib_name = self.target_name
+      if os.path.exists(lib_name):
+        self.target_name = basename
+        self.host_name = lib_name
+        if self.verbose:
+          print "Found '" + self.host_name + "' for '" + self.target_name + "'"
     self.located = True
 
   def LookupAddressInSymbolTable(self, address_str):
