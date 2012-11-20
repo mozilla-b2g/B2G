@@ -37,6 +37,7 @@ for i in \
     external/stlport/stlport \
     external/bluetooth/bluez \
     external/dbus \
+    external/libpng \
     frameworks/base/include \
     frameworks/base/media/libstagefright \
     frameworks/base/native/include \
