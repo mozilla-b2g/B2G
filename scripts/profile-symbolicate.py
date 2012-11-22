@@ -55,7 +55,7 @@ class Library:
     for address_str in addresses_strs:
       lib_address = int(address_str, 0) - self.start + self.offset
       if self.verbose:
-        print "Address %s maps to library '%s' offset 0x%08x" % (address, self.host_name, lib_address)
+        print "Address %s maps to library '%s' offset 0x%08x" % (address_str, self.host_name, lib_address)
       args.append("0x%08x" % lib_address)
     # Calling addr2line will return 2 lines for each address. The output will be something
     # like the following:
@@ -118,7 +118,7 @@ class Library:
       if not lib_name:
         # Probably an android library
         if "PRODUCT_OUT" in os.environ:
-          product_out = os.environ["PRODUCT_OUT"]
+          product_out = os.environ["PRODUCT_OUT"] + "/symbols"
         else:
           product_out = "out/target/product"
         if not os.path.isdir(product_out):
