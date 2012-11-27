@@ -92,6 +92,8 @@ It can sometimes be useful to build against a different Gecko than the one speci
     GECKO_PATH=/path/to/mozilla-central
     GECKO_OBJDIR=/path/to/mozilla-central/objdir-gonk
 
+Note that if you switch your userconfig's gecko path, you need to rm -rf the objdir and rebuild.
+
 ## Build
 
 Run build.sh or bld.sh to build B2G.
