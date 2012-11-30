@@ -108,7 +108,7 @@ class B2GConfig(object):
     CONFIG_VARS = ("GECKO_PATH", "GECKO_OBJDIR")
 
     def __init__(self):
-        shell = ". load-config.sh"
+        shell = ". load-config.sh 1>&2"
         for var in self.CONFIG_VARS:
             shell += "\necho $%s" % var
 
