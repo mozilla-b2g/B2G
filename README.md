@@ -56,6 +56,12 @@ Of course, you'll need the g++-4.6 package installed.
   * ccache
   * autoconf-2.13 - brew install https://raw.github.com/Homebrew/homebrew-versions/master/autoconf213.rb
 
+Note: Some B2G subrepositories contain files whose names differ only in case.
+Amazingly, the build seems to work properly on OSX case-insensitive file
+systems, despite this.  But if you do |./repo status|, you'll see lots of
+spurrious "modified files" corresponding to these pairs of files whose names
+differ only in case.  Try not to worry about it.
+
 ## Configure
 
 Run config.sh to get a list of supported devices:
