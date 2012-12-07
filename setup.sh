@@ -14,5 +14,7 @@ export GAIA_DEBUG &&
 export GECKO_OBJDIR &&
 export B2G_NOOPT &&
 export B2G_DEBUG &&
+export MOZ_CHROME_MULTILOCALE &&
+export L10NBASEDIR &&
 . build/envsetup.sh &&
 lunch $LUNCH
