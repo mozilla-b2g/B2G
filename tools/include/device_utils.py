@@ -206,10 +206,7 @@ def _wait_for_remote_files(outfiles_prefixes, num_expected_files, old_files):
 
     '''
     wait_interval = .25
-    max_wait = 30
-
-    warn_time = 5
-    warned = False
+    max_wait = 60 * 2
 
     for i in range(0, int(max_wait / wait_interval)):
         new_files = _list_remote_temp_files(outfiles_prefixes) - old_files
@@ -218,13 +215,6 @@ def _wait_for_remote_files(outfiles_prefixes, num_expected_files, old_files):
         sys.stdout.write('\rGot %d/%d files.' %
                          (len(new_files), num_expected_files))
         sys.stdout.flush()
-
-        if not warned and len(new_files) == 0 and i * wait_interval >= warn_time:
-            warned = True
-            sys.stdout.write('\r')
-            print(textwrap.fill(textwrap.dedent("""\
-                  The device may be asleep and not responding to our signal.
-                  Try pressing a button on the device to wake it up.\n\n""")))
 
         if len(new_files) == num_expected_files:
             print('')
