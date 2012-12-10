@@ -486,7 +486,7 @@ class StackFixer(object):
             return '%s (addr2line exception)' % fallback_str()
 
 def fix_b2g_stacks_in_file(infile, outfile, args={}, **kwargs):
-    '''Read lines from inflie and output those lines to outfile with their
+    '''Read lines from infile and output those lines to outfile with their
     stack frames rewritten.
 
     infile and outfile may be a files or file-like objects.  For example, to
