@@ -150,6 +150,11 @@ flash_heimdall()
 # Delete files in the device's /system/b2g that aren't in
 # $GECKO_OBJDIR/dist/b2g.
 #
+# We do this for general cleanliness, but also because b2g.sh determines
+# whether to use DMD by looking for the presence of libdmd.so in /system/b2g.
+# If we switch from a DMD to a non-DMD build and then |flash.sh gecko|, we want
+# to disable DMD, so we have to delete libdmd.so.
+#
 # Note that we do not delete *folders* in /system/b2g.  This is intentional,
 # because some user data is stored under /system/b2g (e.g. prefs), but it seems
 # to be stored only inside directories.
