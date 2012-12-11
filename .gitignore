@@ -4,6 +4,7 @@
 .var.profile
 *.swp
 *.pyc
+*.fix_b2g_stack.cache
 Adreno*
 Makefile
 abi/

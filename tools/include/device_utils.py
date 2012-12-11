@@ -139,7 +139,8 @@ def run_and_delete_dir_on_exception(fun, dir):
 def send_signal_and_pull_files(signal,
                               outfiles_prefixes,
                               remove_outfiles_from_device,
-                              out_dir):
+                              out_dir,
+                              optional_outfiles_prefixes=[]):
     '''Send a signal to the main B2G process and pull files created as a
     result.
 
@@ -157,18 +158,21 @@ def send_signal_and_pull_files(signal,
     ['foo-', 'bar-'].
 
     We expect to pull len(outfiles_prefixes) * (# b2g processes) files from the
-    device.
+    device.  If that succeeds, we then pull all files which match
+    optional_outfiles_prefixes.
 
     '''
     (master_pid, child_pids) = get_remote_b2g_pids()
     old_files = _list_remote_temp_files(outfiles_prefixes)
     _send_remote_signal(signal, master_pid)
 
+    all_outfiles_prefixes = outfiles_prefixes + optional_outfiles_prefixes
+
     num_expected_files = len(outfiles_prefixes) * (1 + len(child_pids))
     _wait_for_remote_files(outfiles_prefixes, num_expected_files, old_files)
-    new_files = _pull_remote_files(outfiles_prefixes, old_files, out_dir)
+    new_files = _pull_remote_files(all_outfiles_prefixes, old_files, out_dir)
     if remove_outfiles_from_device:
-        _remove_files_from_device(outfiles_prefixes, old_files)
+        _remove_files_from_device(all_outfiles_prefixes, old_files)
     return [os.path.basename(f) for f in new_files]
 
 # You probably don't need to call the functions below from outside this module,
@@ -202,10 +206,7 @@ def _wait_for_remote_files(outfiles_prefixes, num_expected_files, old_files):
 
     '''
     wait_interval = .25
-    max_wait = 30
-
-    warn_time = 5
-    warned = False
+    max_wait = 60 * 2
 
     for i in range(0, int(max_wait / wait_interval)):
         new_files = _list_remote_temp_files(outfiles_prefixes) - old_files
@@ -214,13 +215,6 @@ def _wait_for_remote_files(outfiles_prefixes, num_expected_files, old_files):
         sys.stdout.write('\rGot %d/%d files.' %
                          (len(new_files), num_expected_files))
         sys.stdout.flush()
-
-        if not warned and len(new_files) == 0 and i * wait_interval >= warn_time:
-            warned = True
-            sys.stdout.write('\r')
-            print(textwrap.fill(textwrap.dedent("""\
-                  The device may be asleep and not responding to our signal.
-                  Try pressing a button on the device to wake it up.\n\n""")))
 
         if len(new_files) == num_expected_files:
             print('')
