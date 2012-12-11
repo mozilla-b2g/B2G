@@ -5,7 +5,7 @@
 This program takes as input a stream or a file containing stack frames
 formatted like
 
-    0x4009c2a6 malloc[libmozglue.so +0x42A6]
+    malloc[libmozglue.so +0x42A6] 0x4009c2a6
 
 and converts frames into human-readable versions, such as
 
@@ -508,14 +508,15 @@ def fix_b2g_stacks_in_file(infile, outfile, args={}, **kwargs):
             pass
 
     matcher = re.compile(
-        r'''(?P<pc>0x[0-9a-fA-F]+)          # program counter
-            \s+
-            (?P<fn>[^\]]+)                  # either '???' or mangled fn signature
+        r'''(?P<fn>[^ ][^\]]*)              # either '???' or mangled fn signature
             \[
               (?P<lib>\S+)                  # library name
               \s+
               \+(?P<offset>0x[0-9a-fA-F]+)  # offset into lib
-            \]''',
+            \]
+            \s+
+            (?P<pc>0x[0-9a-fA-F]+)          # program counter
+            ''',
         re.VERBOSE)
 
     fixer = StackFixer(options)
