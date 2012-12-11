@@ -60,7 +60,7 @@ else
      echo ""
      echo "Using DMD."
      echo ""
-     dmd="sample-below=4096"
+     dmd="--sample-below=4096"
      ld_preload_extra="/system/b2g/libdmd.so"
   fi
 
