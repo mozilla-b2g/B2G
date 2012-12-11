@@ -106,8 +106,8 @@ class FixB2GStacksOptions(object):
       * remove_cache: If true, delete fix_b2g_stack.py's persistent
         addr2line cache when we start running fix_b2g_stacks_in_file.
 
-    In addition, it defines two additional properties on itself based on
-    the parameters it received.
+    In addition, this class defines two additional properties on itself based
+    on the parameters received in __init__.
 
       * lib_search_dirs: [$gecko_objdir, $gonk_objdir/target/product/$product]
 
@@ -510,7 +510,7 @@ def fix_b2g_stacks_in_file(infile, outfile, args={}, **kwargs):
     matcher = re.compile(
         r'''(?P<pc>0x[0-9a-fA-F]+)          # program counter
             \s+
-            (?P<fn>[^\]]+)                  # either '???' or demangled fn signature
+            (?P<fn>[^\]]+)                  # either '???' or mangled fn signature
             \[
               (?P<lib>\S+)                  # library name
               \s+
