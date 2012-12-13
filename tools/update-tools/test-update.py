@@ -26,12 +26,17 @@ from update_tools import UpdateXmlOptions, TestUpdate
 
 def main():
     options = UpdateXmlOptions(output_arg=False)
+    options.add_argument("--update-dir", dest="update_dir", metavar="DIR",
+        default=None, help="Use a local http directory instead of pushing " +
+                            " Busybox to the device. Also requires --url-template")
     options.parse_args()
 
     try:
         test_update = TestUpdate(options.build_xml(),
                                  complete_mar=options.get_complete_mar(),
-                                 partial_mar=options.get_partial_mar())
+                                 partial_mar=options.get_partial_mar(),
+                                 url_template=options.get_url_template(),
+                                 update_dir=options.options.update_dir)
 
         test_update.test_update()
     except Exception, e:

@@ -14,13 +14,14 @@
 #
 # APIs for building and testing OTA and FOTA updates for FxOS
 
-import hashlib
 import argparse
+from cStringIO import StringIO
+import datetime
+import hashlib
 import os
 import platform
 import re
 import shutil
-import StringIO
 import subprocess
 import sys
 import tempfile
@@ -44,10 +45,26 @@ def validate_env(parser):
 
 def run_command(*args, **kwargs):
     try:
+        if "input" in kwargs:
+            input = kwargs.pop("input")
+            if "stdin" not in kwargs:
+                kwargs["stdin"] = subprocess.PIPE
+            if "stdout" not in kwargs:
+                kwargs["stdout"] = subprocess.PIPE
+            if "stderr" not in kwargs:
+                kwargs["stderr"] = subprocess.PIPE
+
+            proc = subprocess.Popen(*args, **kwargs)
+            out, err = proc.communicate(input)
+            if proc.returncode != 0:
+                raise UpdateException("Processs returned error code %d: %s" % \
+                                      (proc.returncode, err))
+            return out
+
         return subprocess.check_output(*args, **kwargs)
     except subprocess.CalledProcessError, e:
-        raise Exception("Process returned error code %d: %s" % \
-                        (e.returncode, " ".join(e.cmd)))
+        raise UpdateException("Process returned error code %d: %s" % \
+                              (e.returncode, " ".join(e.cmd)))
 
 # Copied from Lib/shutil.py in Python 3.3.0
 # http://docs.python.org/3/license.html
@@ -104,8 +121,10 @@ def which(cmd, mode=os.F_OK | os.X_OK, path=None):
                     return name
     return None
 
+class UpdateException(Exception): pass
+
 class B2GConfig(object):
-    CONFIG_VARS = ("GECKO_PATH", "GECKO_OBJDIR")
+    CONFIG_VARS = ("GECKO_PATH", "GECKO_OBJDIR", "DEVICE")
 
     def __init__(self):
         shell = ". load-config.sh"
@@ -116,11 +135,11 @@ class B2GConfig(object):
                              env={"B2G_DIR": b2g_dir})
 
         if not result:
-            raise Exception("Couldn't parse result of load-config.sh")
+            raise UpdateException("Couldn't parse result of load-config.sh")
 
         lines = result.splitlines()
         if len(lines) != len(self.CONFIG_VARS):
-            raise Exception("Wrong number of config vars: %d" % len(lines))
+            raise UpdateException("Wrong number of config vars: %d" % len(lines))
 
         for i in range(len(self.CONFIG_VARS)):
             setattr(self, self.CONFIG_VARS[i].lower(), lines[i].strip())
@@ -141,7 +160,7 @@ class B2GConfig(object):
             self.gecko_path = relative_gecko_path
             return
 
-        raise Exception("B2G gecko directory not found: %s" % self.gecko_path)
+        raise UpdateException("B2G gecko directory not found: %s" % self.gecko_path)
 
     def get_gecko_host_bin(self, path):
         return os.path.join(self.gecko_objdir, "dist", "host", "bin", path)
@@ -149,11 +168,12 @@ class B2GConfig(object):
 class Tool(object):
     def __init__(self, path, prebuilt=False):
         self.tool = path
+        self.debug = False
         if prebuilt:
             self.init_prebuilt(path)
 
         if not os.path.exists(self.tool):
-            raise Exception("Couldn't find %s " % self.tool)
+            raise UpdateException("Couldn't find %s " % self.tool)
 
     def init_prebuilt(self, path):
         host_dir = "linux-x86"
@@ -166,14 +186,23 @@ class Tool(object):
         return self.tool
 
     def run(self, *args, **kwargs):
-        return run_command((self.tool,) + args, **kwargs)
+        command = (self.tool, ) + args
+        if self.debug:
+            print " ".join(['"%s"' % c for c in command])
+
+        return run_command(command, **kwargs)
 
 class AdbTool(Tool):
     DEVICE   = ("-d")
     EMULATOR = ("-e")
+    DEVICES_HEADER = "List of devices attached"
 
-    def __init__(self, device=None):
-        Tool.__init__(self, "adb", prebuilt=True)
+    def __init__(self, path=None, device=None):
+        prebuilt = path is None
+        if not path:
+            path = "adb"
+        Tool.__init__(self, path, prebuilt=prebuilt)
+
         self.adb_args = ()
         if device in (self.DEVICE, self.EMULATOR):
             self.adb_args = device
@@ -205,11 +234,29 @@ class AdbTool(Tool):
     def get_cmdline(self, pid):
         cmdline_path = "/proc/%s/cmdline" % pid
         if not self.file_exists(cmdline_path):
-            raise Exception("Command line file for PID %s not found" % pid)
+            raise UpdateException("Command line file for PID %s not found" % pid)
 
         result = self.shell("cat %s" % cmdline_path)
         # cmdline is null byte separated and has a trailing null byte
         return result.split("\x00")[:-1]
+
+    def get_online_devices(self):
+        output = self.run("devices")
+        online = set()
+        for line in output.split("\n"):
+            if line.startswith(self.DEVICES_HEADER):
+                continue
+
+            tokens = line.split("\t")
+            if len(tokens) != 2:
+                continue
+
+            device = tokens[0]
+            state = tokens[1]
+            if state == "device":
+                online.add(device)
+
+        return online
 
 class MarTool(Tool):
     def __init__(self):
@@ -256,7 +303,7 @@ class BZip2Mar(object):
         self.mar_tool = MarTool()
         self.bzip2_tool = which("bzip2")
         if not self.bzip2_tool:
-            raise Exception("Couldn't find bzip2 on the PATH")
+            raise UpdateException("Couldn't find bzip2 on the PATH")
 
     def bzip2(self, *args):
         bzargs = [self.bzip2_tool]
@@ -268,7 +315,7 @@ class BZip2Mar(object):
 
     def create(self, src_dir):
         if not os.path.exists(src_dir):
-            raise Exception("Source directory doesn't exist: %s" % src_dir)
+            raise UpdateException("Source directory doesn't exist: %s" % src_dir)
 
         temp_dir = tempfile.mkdtemp()
         for root, dirs, files in os.walk(src_dir):
@@ -290,7 +337,7 @@ class BZip2Mar(object):
         if not os.path.exists(dest_dir):
             os.makedirs(dest_dir)
             if not os.path.exists(dest_dir):
-                raise Exception("Couldn't create directory: %s" % dest_dir)
+                raise UpdateException("Couldn't create directory: %s" % dest_dir)
 
         self.mar_tool.extract(self.mar_file, dest_dir=dest_dir)
         for root, dirs, files in os.walk(dest_dir):
@@ -305,8 +352,8 @@ class FotaZip(zipfile.ZipFile):
     MANIFEST_MF    = "META-INF/MANIFEST.MF"
     CERT_SF        = "META-INF/CERT.SF"
 
-    def __init__(self, path):
-        zipfile.ZipFile.__init__(self, path, "r")
+    def __init__(self, path, mode="r", compression=zipfile.ZIP_DEFLATED):
+        zipfile.ZipFile.__init__(self, path, mode, compression)
 
     def has_entry(self, entry):
         try:
@@ -321,47 +368,71 @@ class FotaZip(zipfile.ZipFile):
 
         for entry in entries:
             if not self.has_entry(entry):
-                raise Exception("Update zip is missing expected file: %s" % entry)
+                raise UpdateException("Update zip is missing expected file: %s" % entry)
+
+    def write_updater_script(self, script):
+        self.writestr(self.UPDATER_SCRIPT, script)
+
+    def write_default_update_binary(self):
+        prebuilt_update_binary = os.path.join(bin_dir, "gonk", "update-binary")
+        self.write(prebuilt_update_binary, self.UPDATE_BINARY)
+
+    def write_recursive(self, path, zip_path=None, filter=None):
+        def zip_relpath(file_path):
+            relpath = os.path.relpath(file_path, path)
+            relpath = relpath.replace("\\", "/").lstrip("/")
+            if zip_path:
+                relpath = zip_path + "/" + relpath
+            return relpath
+
+        for root, dirs, files in os.walk(path):
+            for f in files:
+                file_path = os.path.join(root, f)
+                relpath = zip_relpath(file_path)
+                if not filter or filter(file_path, relpath):
+                    self.write(file_path, relpath)
+
+            if not filter:
+                continue
+
+            for d in dirs:
+                dir_path = os.path.join(root, d)
+                relpath = zip_relpath(dir_path)
+                if not filter(dir_path, relpath):
+                    dirs.remove(d)
 
 class FotaZipBuilder(object):
     def build_unsigned_zip(self, update_dir, output_zip):
         if not os.path.exists(update_dir):
-            raise Exception("Update dir doesn't exist: %s" % update_dir)
+            raise UpdateException("Update dir doesn't exist: %s" % update_dir)
 
         update_binary = os.path.join(update_dir, FotaZip.UPDATE_BINARY)
         updater_script = os.path.join(update_dir, FotaZip.UPDATER_SCRIPT)
         if not os.path.exists(updater_script):
-            raise Exception("updater-script not found at %s" % updater_script)
+            raise UpdateException("updater-script not found at %s" % updater_script)
 
-        update_zipfile = zipfile.ZipFile(output_zip, "w", zipfile.ZIP_DEFLATED)
+        update_zipfile = FotaZip(output_zip, "w")
 
         if not os.path.exists(update_binary):
-            prebuilt_update_binary = os.path.join(bin_dir, "gonk", "update-binary")
-            print "Warning: update-binary not found, adding to zip from %s" % \
-                  prebuilt_update_binary
-            update_zipfile.write(prebuilt_update_binary, FotaZip.UPDATE_BINARY)
+            print "Warning: update-binary not found, using default"
+            update_zipfile.write_default_update_binary()
 
-        for root, dirs, files in os.walk(update_dir):
-            for name in files:
-                file_path = os.path.join(root, name)
-                relative_path = os.path.relpath(file_path, update_dir)
-                update_zipfile.write(file_path, relative_path)
-
+        update_zipfile.write_recursive(update_dir)
         update_zipfile.close()
 
     def sign_zip(self, unsigned_zip, public_key, private_key, output_zip):
         java = which("java")
         if java is None:
-            raise Exception("java is required to be on your PATH for signing")
+            raise UpdateException("java is required to be on your PATH for signing")
 
         with FotaZip(unsigned_zip) as fota_zip:
             fota_zip.validate()
 
         if not os.path.exists(private_key):
-            raise Exception("Private key doesn't exist: %s" % private_key)
+            raise UpdateException("Private key doesn't exist: %s" % private_key)
 
         if not os.path.exists(public_key):
-            raise Exception("Public key doesn't exist: %s" % public_key)
+            raise UpdateException("Public key doesn't exist: %s" % public_key)
 
         signapk_jar = os.path.join(bin_dir, "signapk.jar")
 
@@ -383,7 +454,7 @@ class FotaMarBuilder(object):
         make_full_update = os.path.join(b2g_config.gecko_path, "tools",
             "update-packaging", "make_full_update.sh")
         if not os.path.exists(make_full_update):
-            raise Exception("Couldn't find %s " % make_full_update)
+            raise UpdateException("Couldn't find %s " % make_full_update)
 
         mar_dir = os.path.join(self.stage_dir, "mar")
         os.mkdir(mar_dir)
@@ -407,12 +478,12 @@ class GeckoMarBuilder(object):
         self.make_full_update = os.path.join(packaging_dir,
             "make_full_update.sh")
         if not os.path.exists(self.make_full_update):
-            raise Exception("Couldn't find %s " % make_full_update)
+            raise UpdateException("Couldn't find %s " % make_full_update)
 
         self.make_incremental_update = os.path.join(packaging_dir,
             "make_incremental_update.sh")
         if not os.path.exists(self.make_incremental_update):
-            raise Exception("Couldn't find %s " % make_incremental_update)
+            raise UpdateException("Couldn't find %s " % make_incremental_update)
 
     def build_gecko_mar(self, src_dir, output_mar, from_dir=None):
         if from_dir:
@@ -426,7 +497,7 @@ class GeckoMarBuilder(object):
         })
 
 class UpdateXmlBuilder(object):
-    DEFAULT_URL_TEMPLATE = "http://localhost/%(patch_name)s"
+    DEFAULT_URL_TEMPLATE = "http://localhost/%(filename)s"
     DEFAULT_UPDATE_TYPE = "minor"
     DEFAULT_APP_VERSION = "99.0"
     DEFAULT_PLATFORM_VERSION = "99.0"
@@ -435,10 +506,11 @@ class UpdateXmlBuilder(object):
 
     def __init__(self, complete_mar=None, partial_mar=None, url_template=None,
                  update_type=None, app_version=None, platform_version=None,
-                 license_url=None, details_url=None, is_fota_update=False):
+                 build_id=None, license_url=None, details_url=None,
+                 is_fota_update=False):
 
         if complete_mar is None and partial_mar is None:
-            raise Exception("either complete_mar or partial_mar is required")
+            raise UpdateException("either complete_mar or partial_mar is required")
 
         self.complete_mar = complete_mar
         self.partial_mar = partial_mar
@@ -446,9 +518,13 @@ class UpdateXmlBuilder(object):
         self.update_type = update_type or self.DEFAULT_UPDATE_TYPE
         self.app_version = app_version or self.DEFAULT_APP_VERSION
         self.platform_version = platform_version or self.DEFAULT_PLATFORM_VERSION
+        self.build_id = build_id or self.generate_build_id()
         self.license_url = license_url or self.DEFAULT_LICENSE_URL
         self.details_url = details_url or self.DEFAULT_DETAILS_URL
         self.is_fota_update = is_fota_update
+
+    def generate_build_id(self):
+        return datetime.datetime.now().strftime('%Y%m%d%H%M%S')
 
     def sha512(self, patch_path):
         patch_hash = hashlib.sha512()
@@ -465,7 +541,7 @@ class UpdateXmlBuilder(object):
         patch.setAttribute("type", patch_type)
 
         template_args = self.__dict__.copy()
-        template_args["patch_name"] = os.path.basename(patch_file)
+        template_args["filename"] = os.path.basename(patch_file)
         patch.setAttribute("URL", self.url_template % template_args)
 
         patch.setAttribute("hashFunction", "SHA512")
@@ -484,6 +560,7 @@ class UpdateXmlBuilder(object):
         update.setAttribute("type", self.update_type)
         update.setAttribute("appVersion", self.app_version)
         update.setAttribute("version", self.platform_version)
+        update.setAttribute("buildID", self.build_id)
         update.setAttribute("licenseURL", self.license_url)
         update.setAttribute("detailsURL", self.details_url)
 
@@ -518,7 +595,7 @@ class UpdateXmlOptions(argparse.ArgumentParser):
 
         self.add_argument("-u", "--url-template", dest="url_template", metavar="URL",
             default=None, help="A template for building URLs in the update.xml. " +
-                               "Default: http://localhost/[patch_name]")
+                               "Default: http://localhost/%%(filename)s")
 
         self.add_argument("-t", "--update-type", dest="update_type",
             default="minor", help="The update type. Default: minor")
@@ -528,6 +605,9 @@ class UpdateXmlOptions(argparse.ArgumentParser):
                                "Default: 99.0")
         self.add_argument("-V", "--platform-version", dest="platform_version",
             default=None, help="The platform version of this update. Default: 99.0")
+
+        self.add_argument("-i", "--build-id", dest="build_id",
+            default=None, help="The Build ID of this update. Default: Current timestamp")
 
         self.add_argument("-l", "--license-url", dest="license_url",
             default=None, help="The license URL of this update. Default: " +
@@ -587,10 +667,13 @@ class UpdateXmlOptions(argparse.ArgumentParser):
     def get_partial_mar(self):
         return self.options.partial_mar
 
+    def get_url_template(self):
+        return self.options.url_template
+
     def build_xml(self):
         option_keys = ("complete_mar", "partial_mar", "url_template",
-            "update_type", "app_version", "platform_version", "license_url",
-            "details_url")
+            "update_type", "app_version", "platform_version", "build_id",
+            "license_url", "details_url")
 
         kwargs = {"is_fota_update": self.is_fota_update}
         for key in option_keys:
@@ -605,34 +688,58 @@ class TestUpdate(object):
     LOCAL_BUSYBOX      = os.path.join(bin_dir, "gonk", "busybox-armv6l")
     REMOTE_HTTP_ROOT   = "/data/local/b2g-updates"
     REMOTE_PROFILE_DIR = "/data/b2g/mozilla"
-    UPDATE_URL         = "http://localhost/update.xml"
 
-    def __init__(self, update_xml, complete_mar=None, partial_mar=None):
-        self.adb = AdbTool()
-        self.stage_dir = tempfile.mkdtemp()
+    def __init__(self, update_xml=None, complete_mar=None, partial_mar=None,
+                 url_template=None, update_dir=None, only_override=False,
+                 adb_path=None, remote_prefs_js=None):
+        self.adb = AdbTool(path=adb_path)
         self.update_xml = update_xml
 
-        if complete_mar is None and partial_mar is None:
-            raise Exception(
+        if complete_mar is None and partial_mar is None and not only_override:
+            raise UpdateException(
                 "At least one of complete_mar or partial_mar is required")
 
         self.complete_mar = complete_mar
         self.partial_mar = partial_mar
 
+        if only_override and not url_template:
+            raise UpdateException("Update URL template required when only overriding")
+
+        if update_dir and not url_template:
+            raise UpdateException("Update URL template required with update dir")
+
+        self.only_override = only_override
+        self.is_local = update_dir is not None
+        if not self.is_local:
+            url_template = url_template or UpdateXmlBuilder.DEFAULT_URL_TEMPLATE
+
+        self.update_url = url_template % { "filename": "update.xml" }
+        self.stage_dir = update_dir if self.is_local else tempfile.mkdtemp()
+        self.remote_prefs_js = remote_prefs_js
 
     def __del__(self):
-        shutil.rmtree(self.stage_dir)
+        if not self.is_local:
+            shutil.rmtree(self.stage_dir)
 
-    def test_update(self):
+    def test_update(self, write_url_pref=True, restart=True):
         output_xml = os.path.join(self.stage_dir, "update.xml")
         with open(output_xml, "w") as out_file:
             out_file.write(self.update_xml)
 
-        self.push_busybox()
-        self.push_update_site()
-        self.start_http_server()
-        self.override_update_url()
-        self.restart_b2g()
+        if not self.is_local:
+            self.push_busybox()
+
+        if not self.only_override:
+            self.push_update_site()
+
+        if not self.is_local:
+            self.start_http_server()
+
+        if write_url_pref:
+            self.override_update_url()
+
+        if restart:
+            self.restart_b2g()
 
     def push_busybox(self):
         if self.adb.file_exists(self.REMOTE_BUSYBOX):
@@ -646,12 +753,17 @@ class TestUpdate(object):
 
     def push_update_site(self):
         if self.complete_mar:
+            if self.is_local:
+                print "Copying %s to %s" % (self.complete_mar, self.stage_dir)
             shutil.copy(self.complete_mar, self.stage_dir)
 
         if self.partial_mar:
+            if self.is_local:
+                print "Copying %s to %s" % (self.partial_mar, self.stage_dir)
             shutil.copy(self.partial_mar, self.stage_dir)
 
-        self.adb.push(self.stage_dir, self.REMOTE_HTTP_ROOT)
+        if not self.is_local:
+            self.adb.push(self.stage_dir, self.REMOTE_HTTP_ROOT)
 
     def get_busybox_httpd_pid(self):
         pids = self.adb.get_pids("busybox")
@@ -680,21 +792,114 @@ class TestUpdate(object):
             sys.exit(1)
 
     def override_update_url(self):
-        profile_dir = self.adb.shell("echo -n %s/*.default" % \
-                                     self.REMOTE_PROFILE_DIR)
-        if "*" in profile_dir:
-            raise Exception("Unable to find profile dir in %s" % \
-                            self.REMOTE_PROFILE_DIR)
+        if not self.remote_prefs_js:
+            profile_dir = self.adb.shell("echo -n %s/*.default" % \
+                                         self.REMOTE_PROFILE_DIR)
+            if "*" in profile_dir:
+                raise UpdateException("Unable to find profile dir in %s" % \
+                                      self.REMOTE_PROFILE_DIR)
+
+            self.remote_prefs_js = profile_dir + "/prefs.js"
 
         url_pref = "app.update.url.override"
-        prefs_js = profile_dir + "/prefs.js"
-
-        print "Overriding update URL in %s to %s" % (prefs_js, self.UPDATE_URL)
+        print "Overriding update URL in %s to %s" % (self.remote_prefs_js, self.update_url)
         self.adb.shell("echo 'user_pref(\"%s\", \"%s\");' >> %s" % \
-                       (url_pref, self.UPDATE_URL, prefs_js))
+                       (url_pref, self.update_url, self.remote_prefs_js))
 
     def restart_b2g(self):
         print "Restarting B2G"
         self.adb.shell("stop b2g; start b2g")
+
+class Partition(object):
+    def __init__(self, fs_type, mount_point, device, fs_size=0):
+        self.fs_type = fs_type
+        self.mount_point = mount_point
+        self.device = device
+        self.fs_size = fs_size
+
+    @classmethod
+    def create_system(cls, fs_type, device):
+        return Partition(fs_type, "/system", device)
+
+    @classmethod
+    def create_data(cls, fs_type, device):
+        return Partition(fs_type, "/data", device)
+
+class FlashFotaBuilder(object):
+    def __init__(self, system, data):
+        self.fstab = { "/system": system, "/data": data }
+        self.symlinks = []
+
+        if "Item" not in globals():
+            self.import_releasetools()
+        self.generator = edify_generator.EdifyGenerator(1, {"fstab": self.fstab})
+
+    def import_releasetools(self):
+        releasetools_dir = os.path.join(b2g_dir, "build", "tools", "releasetools")
+        sys.path.append(releasetools_dir)
+        execfile(os.path.join(b2g_dir, "build", "tools", "releasetools",
+                              "ota_from_target_files"), globals())
+        sys.path.pop()
+
+    def zip_filter(self, path, relpath):
+        Item.Get(relpath, dir=os.path.isdir(path))
+        if not os.path.isdir(path) and os.path.islink(path):
+            # This assumes that system always maps to /system, data to /data, etc
+            self.symlinks.append((os.readlink(path), "/" + relpath))
+            return False
+        return True
+
+    def build_flash_fota(self, system_dir, public_key, private_key, output_zip):
+        fd, unsigned_zip = tempfile.mkstemp()
+        os.close(fd)
+
+        with FotaZip(unsigned_zip, "w") as flash_zip:
+            flash_zip.write_recursive(system_dir, "system", filter=self.zip_filter)
+            flash_zip.write_updater_script(self.build_flash_script())
+            flash_zip.write_default_update_binary()
+
+        FotaZipBuilder().sign_zip(unsigned_zip, public_key, private_key,
+                                  output_zip)
+        os.unlink(unsigned_zip)
+
+    def build_flash_script(self):
+        for mount_point, partition in self.fstab.iteritems():
+            partition_type = common.PARTITION_TYPES[partition.fs_type]
+            self.generator.AppendExtra('format("%s", "%s", "%s", %d);' % \
+                (partition.fs_type, partition_type, partition.device,
+                 partition.fs_size))
+
+        for mount_point in self.fstab:
+            self.generator.Mount(mount_point)
+
+        self.generator.UnpackPackageDir("system", "/system")
+
+        self.generator.MakeSymlinks(self.symlinks)
+        self.build_permissions()
+        self.generator.UnmountAll()
+        return "\n".join(self.generator.script) + "\n"
+
+    def build_permissions(self):
+        # Put fs_config on the PATH
+        host = "linux-x86"
+        if platform.system() == "Darwin":
+            host = "darwin-x86"
+
+        host_bin_dir = os.path.join(b2g_dir, "out", "host", host, "bin")
+        fs_config = Tool(os.path.join(host_bin_dir, "fs_config"))
+        suffix = { False: "", True: "/" }
+        paths = "\n".join([i.name + suffix[i.dir]
+                           for i in Item.ITEMS.itervalues() if i.name])
+        self.fs_config_data = fs_config.run(input=paths)
+
+        # see build/tools/releasetools/ota_from_target_files
+        Item.GetMetadata(self)
+        Item.Get("system").SetPermissions(self.generator)
+
+    "Emulate zipfile.read so we can reuse Item.GetMetadata"
+    def read(self, path):
+        if path == "META/filesystem_config.txt":
+            return self.fs_config_data
+        raise KeyError
 
 b2g_config = B2GConfig()
