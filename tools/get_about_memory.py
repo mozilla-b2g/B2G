@@ -179,6 +179,8 @@ def get_and_show_dump(args):
 
     # Try to open the dump in Firefox.
     about_memory_url = "about:memory?file=%s" % urllib.quote(merged_reports_path)
+
+    opened_in_firefox = False
     if args.open_in_firefox:
         try:
             # Open about_memory_url in Firefox, but don't display stdout or stderr.
@@ -193,23 +195,24 @@ def get_and_show_dump(args):
             # platform-independent, so whatever.
             fnull = open('/dev/null', 'w')
             subprocess.Popen(['firefox', about_memory_url], stdout=fnull, stderr=fnull)
+            opened_in_firefox = True
+
             print()
             print(textwrap.fill(textwrap.dedent('''\
                 I just tried to open the memory report in Firefox.  If that
                 didn't work for some reason, or if you want to open this report
                 at a later time, open the following URL in a Firefox nightly build:
                 ''')) + '\n\n  ' + about_memory_url)
-            return
         except (subprocess.CalledProcessError, OSError):
             pass
 
-    # If not args.open_in_firefox or if we weren't able to open in Firefox,
-    # output the message below.
-    print()
-    print(textwrap.fill(textwrap.dedent('''\
-        To view this report, open Firefox on this machine and load the
-        following URL:
-        ''')) + '\n\n  ' + about_memory_url)
+    # If we didn't open in Firefox, output the message below.
+    if not opened_in_firefox:
+        print()
+        print(textwrap.fill(textwrap.dedent('''\
+            To view this report, open Firefox on this machine and load the
+            following URL:
+            ''')) + '\n\n  ' + about_memory_url)
 
     process_dmd_files(dmd_files, args)
 
