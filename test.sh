@@ -3,7 +3,7 @@
 B2G_HOME=$(dirname $BASH_SOURCE)
 
 usage() {
-    echo "Usage: $0 [marionette|mochitest] (frontend-args)"
+    echo "Usage: $0 [marionette|mochitest|updates] (frontend-args)"
     echo ""
     echo "'marionette' is the default frontend"
 }
@@ -20,6 +20,8 @@ case "$FRONTEND" in
     SCRIPT=$B2G_HOME/scripts/mochitest.sh ;;
   marionette)
     SCRIPT=$B2G_HOME/scripts/marionette.sh ;;
+  updates)
+    SCRIPT=$B2G_HOME/scripts/updates.sh ;;
   --help|-h|help)
     usage
     exit 0;;
