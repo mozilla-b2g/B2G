@@ -54,7 +54,9 @@ function configure_device() {
 
 export REPO=$PWD/repo
 export B2G_TREEID_SH="$PWD/patches/treeid.sh"
-export B2G_HASHED_FILES="$PWD/patches/vendorsetup.sh ${B2G_TREEID_SH}"
+# We include .config in the list of hashed files now because we have
+# per-device patch queues, since it's where we pick the device to build
+export B2G_HASHED_FILES="$PWD/patches/vendorsetup.sh ${B2G_TREEID_SH} $PWD/.config"
 export B2G_PATCH_DIRS_OVERRIDE=patches
 
 . setup.sh &&
