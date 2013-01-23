@@ -269,7 +269,7 @@ check_xcode() {
     
     # Assume the old Xcode 3 location, then look elsewhere
     
-    if [ -d "/Developer" ]; then
+    if [ -d "/Developer/Applications/Xcode.app" ]; then
       xcode_path=/Developer/Applications/Xcode.app
       osx_106_sdk=/Developer/SDKs/MacOSX10.6.sdk
       osx_sdk=$osx_106_sdk
