@@ -52,14 +52,9 @@ function configure_device() {
     return $?
 }
 
-export REPO=$PWD/repo
-export B2G_TREEID_SH="$PWD/patches/treeid.sh"
-export B2G_HASHED_FILES="$PWD/patches/vendorsetup.sh ${B2G_TREEID_SH}"
-export B2G_PATCH_DIRS_OVERRIDE=patches
-
 . setup.sh &&
-if [ -f patches/vendorsetup.sh ] ; then
-    . patches/vendorsetup.sh
+if [ -f patches/patch.sh ] ; then
+    . patches/patch.sh
 fi &&
 configure_device &&
 time nice -n19 make $MAKE_FLAGS $@
