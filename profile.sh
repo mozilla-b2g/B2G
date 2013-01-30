@@ -4,6 +4,7 @@ SCRIPT_NAME=$(basename $0)
 
 ADB=adb
 PROFILE_DIR=/data/local/tmp
+PROFILE_PATTERN=${PROFILE_DIR}/'profile_?_*.txt';
 
 # The get_pids function populates B2G_PIDS as an array containting the PIDs
 # of all of the b2g processes
@@ -103,6 +104,22 @@ is_profiler_running() {
 
 ###########################################################################
 #
+# Removes any stale profile files which might be left on the device
+#
+remove_profile_files() {
+  echo -n "Removing old profile files ..."
+  for file in $(${ADB} shell echo -n ${PROFILE_PATTERN}); do
+    # If no files match the pattern, then echo will return the pattern
+    if [ "${file}" != "${PROFILE_PATTERN}" ]; then
+      echo -n "."
+      ${ADB} shell rm ${file}
+    fi
+  done
+  echo " done"
+}
+
+###########################################################################
+#
 # Capture the profiling information from a given process.
 #
 HELP_capture="Signals, pulls, and symbolicates the profile data"
@@ -119,21 +136,32 @@ cmd_capture() {
   get_comms
   declare -a local_filename
   local timestamp=$(date +"%H%M")
+  cmd_stabilize
   if [ "${CMD_SIGNAL_PID:0:1}" == "-" ]; then
     # We signalled the entire process group. Pull and symbolicate
     # each file
     for pid in ${B2G_PIDS[*]}; do
       cmd_pull ${pid} "${B2G_COMMS[${pid}]}" ${timestamp}
-      local_filename[${pid}]="${CMD_PULL_LOCAL_FILENAME}"
+      if [ ! -z "${CMD_PULL_LOCAL_FILENAME}" ]; then
+        local_filename[${pid}]="${CMD_PULL_LOCAL_FILENAME}"
+      fi
     done
     echo
     for filename in "${local_filename[@]}"; do
-      cmd_symbolicate "${filename}"
+      if [ -s "${filename}" ]; then
+        # File exists and has size > 0
+        cmd_symbolicate "${filename}"
+      fi
     done
   else
     cmd_pull ${CMD_SIGNAL_PID} "${B2G_COMMS[${CMD_SIGNAL_PID}]}"
-    cmd_symbolicate "${CMD_PULL_LOCAL_FILENAME}"
+    if [ ! -z "${CMD_PULL_LOCAL_FILENAME}" -a -s "${CMD_PULL_LOCAL_FILENAME}" ]; then
+      cmd_symbolicate "${CMD_PULL_LOCAL_FILENAME}"
+    fi
   fi
+  # cmd_pull should remove each file as we pull it. This just covers the
+  # case where it doesn't
+  remove_profile_files
 }
 
 ###########################################################################
@@ -217,65 +245,22 @@ cmd_pull() {
   else
     local_filename="profile_${label}_${pid}_${B2G_COMMS[${pid}]}.txt"
   fi
-
-  echo -n "Waiting for profile file for ${pid}:${B2G_COMMS[${pid}]} to stabilize ..."
-  for attempt in 1 2 3 4 5 6 7 8 9 10; do
-    profile_filename=$(${ADB} shell "echo -n ${profile_pattern}")
-    if [ "${profile_filename}" == "${profile_pattern}" ]; then
-      echo -n "."
-      sleep 1
-    else
-      break
-    fi
-  done
+  profile_filename=$(${ADB} shell "echo -n ${profile_pattern}")
+  
+  CMD_PULL_LOCAL_FILENAME=
   if [ "${profile_filename}" == "${profile_pattern}" ]; then
-    echo
-    echo "Profiler doesn't seem to have created file: '${profile_pattern}'"
-    echo "Did you start the profiler using ${SCRIPT_NAME} start ?"
-    exit 1
-  fi
-  local prev_ls
-  local matches=0
-  local filesize
-  local stabilized=0
-  for attempt in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15; do
-    curr_ls=$(${ADB} shell "ls -l ${profile_pattern}")
-    # Android's ls -l output looks like:
-    #   -rw-rw-rw- root     root      2078953 2012-09-28 15:14 profile_0_4601.txt
-    # if the file exists, or
-    #   /data/local/tmp/profile_?_4601.txt: No such file or directory
-    # if it doesn't. In the first case, field[3] corresponds to the file size. In
-    # the second case fields[3] will contain the word "file"
-    local fields=(${curr_ls})
-    filesize=${fields[3]}
-    if [ "${prev_ls}" != "${curr_ls}" -o "${filesize}" == "0" -o "${filesize}" == "file" ]; then
-      prev_ls=${curr_ls}
-      echo -n "."
-      echo -n "${filesize}"
-      matches=0
-    else
-      echo -n "+"
-      matches=$(( ${matches} + 1 ))
-      if [ ${matches} -ge 5 ]; then
-        # If the filesize hasn't changed in 5 seconds then we consider
-        # the file to be stabilized.
-        stabilized=1
-        break
-      fi
-    fi
-    sleep 1
-  done
-  echo
-  if [ "${stabilized}" == "0" ]; then
-    # Whoops. The process probably got killed (due to OOM) by trying to
-    # collect the profile file. Skip it.
-    echo "Whoops. Looks like ${pid}:${B2G_COMMS[${pid}]} is gone. Skipping..."
-    CMD_PULL_LOCAL_FILENAME=
+    echo "Profile file for PID ${pid} ${B2G_COMMS[${pid}]} doesn't exist - process likely killed due to OOM"
     return
   fi
-
   echo "Pulling ${profile_filename} into ${local_filename}"
   ${ADB} pull ${profile_filename} "${local_filename}"
+  echo "Removing ${profile_filename}"
+  ${ADB} shell rm ${profile_filename}
+
+  if [ ! -s "${local_filename}" ]; then
+    echo "Profile file for PID ${pid} ${B2G_COMMS[${pid}]} is empty - process likely killed due to OOM"
+    return
+  fi
   CMD_PULL_LOCAL_FILENAME="${local_filename}"
 }
 
@@ -312,11 +297,87 @@ cmd_signal() {
 
 ###########################################################################
 #
+# Wait for the captured profile files to stabilize.
+#
+
+HELP_stabilzie="Waits for the profile files to stop changing"
+cmd_stabilize() {
+
+  # We wait for the output of ls ${PROFILE_PATTERN} to stay the same for
+  # a few seconds in a row
+
+  local attempt
+  local prev_ls_output
+  local curr_ls_output
+  local zero_count
+  local stabilized=0
+  local waiting=0
+
+  echo -n "Waiting for files to stabilize "
+  while true; do
+    curr_sizes=$(${ADB} shell ls -l ${PROFILE_PATTERN} | while read line; do
+      echo ${line} | (
+        read perms user group size rest;
+        echo -n "${size} "
+      )
+    done)
+    zero_count=0
+    for size in ${curr_sizes}; do
+      if [ "${size}" == "0" ]; then
+        zero_count=$(( ${zero_count} + 1 ))
+      fi
+    done
+    # For debugging the loop, It's convenient to uncomment the following
+    #echo ">${curr_sizes}<"
+    if [ "${prev_sizes}" == "${curr_sizes}" ]; then
+      # No changes detected
+      if [ ${zero_count} -eq 0 ]; then
+        # No changes detected, no zero length files left
+        echo -n "="
+        matches=$(( ${matches} + 1 ))
+        if [ ${matches} -ge 2 ]; then
+          # All of our files have non-zero sizes and haven't
+          # changed, so we now consider them the be stabilized.
+          stabilized=1
+          break
+        fi
+      else
+        # There are some zero length files. We're either waiting
+        # for them, or the process was OOM'd
+        echo -n "."
+        matches=0
+        waiting=$(( ${waiting} + 1 ))
+        if [ ${waiting} -gt 5 ]; then
+          echo "!"
+          break
+        fi
+      fi
+    else
+      # Something has changed
+      echo -n "${zero_count}"
+      matches=0
+      waiting=0
+    fi
+    prev_sizes=${curr_sizes}
+    sleep 1
+  done
+  echo
+  if [ "${stabilized}" == "0" ]; then
+    # Whoops. One (or more) process(es) probably got killed (due to OOM)
+    # by trying to collect the profile file.
+    echo "Whoops. Looks like some processes were killed due to OOM..."
+    echo
+  fi
+}
+
+###########################################################################
+#
 # Start b2g with the profiler enabled.
 #
 HELP_start="Starts the profiler"
 cmd_start() {
   stop_b2g
+  remove_profile_files
   echo -n "Starting b2g with profiling enabled ..."
   # Use nohup or we may accidentally kill the adb shell when this
   # script exits.
