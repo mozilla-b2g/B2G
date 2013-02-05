@@ -5,6 +5,7 @@ SCRIPT_NAME=$(basename $0)
 ADB=adb
 PROFILE_DIR=/data/local/tmp
 PROFILE_PATTERN=${PROFILE_DIR}/'profile_?_*.txt';
+PREFIX=""
 
 # The get_pids function populates B2G_PIDS as an array containting the PIDs
 # of all of the b2g processes
@@ -107,7 +108,7 @@ is_profiler_running() {
 # Removes any stale profile files which might be left on the device
 #
 remove_profile_files() {
-  echo -n "Removing old profile files ..."
+  echo -n "Removing old profile files (from device) ..."
   for file in $(${ADB} shell echo -n ${PROFILE_PATTERN}); do
     # If no files match the pattern, then echo will return the pattern
     if [ "${file}" != "${PROFILE_PATTERN}" ]; then
@@ -136,27 +137,45 @@ cmd_capture() {
   get_comms
   declare -a local_filename
   local timestamp=$(date +"%H%M")
-  cmd_stabilize
+  local stabilized
   if [ "${CMD_SIGNAL_PID:0:1}" == "-" ]; then
-    # We signalled the entire process group. Pull and symbolicate
-    # each file
-    for pid in ${B2G_PIDS[*]}; do
-      cmd_pull ${pid} "${B2G_COMMS[${pid}]}" ${timestamp}
-      if [ ! -z "${CMD_PULL_LOCAL_FILENAME}" ]; then
-        local_filename[${pid}]="${CMD_PULL_LOCAL_FILENAME}"
-      fi
+    # We signalled the entire process group. Stabilize, pull and symbolicate
+    # each file in parallel
+    for pid in ${B2G_PIDS[*]}; do (
+      PREFIX="     ${pid}"
+      PREFIX="${PREFIX:$((${#PREFIX} - 5)):5}: "
+      echo "${PREFIX}Stabilizing ${B2G_COMMS[${pid}]} ..." 1>&2
+      stabilized=$(cmd_stabilize ${pid})
+      if [ "${stabilized}" == "0" ]; then
+        echo "${PREFIX}Process was probably killed due to OOM" 1>&2
+      else
+        cmd_pull ${pid} "${B2G_COMMS[${pid}]}" ${timestamp}
+        if [ ! -z "${CMD_PULL_LOCAL_FILENAME}" -a -s "${CMD_PULL_LOCAL_FILENAME}" ]; then
+          cmd_symbolicate "${CMD_PULL_LOCAL_FILENAME}"
+        else
+          echo "${PREFIX}PULL FAILED for ${pid}" 1>&2
+        fi
+      fi) &
     done
-    echo
-    for filename in "${local_filename[@]}"; do
-      if [ -s "${filename}" ]; then
-        # File exists and has size > 0
-        cmd_symbolicate "${filename}"
-      fi
-    done
+    # This sleep just delays the "Waiting for stuff to finish" echo slightly
+    # so that it shows up after the Stabilizing echos from above. The
+    # stabilizing loop will delay for at least two seconds, so this has no
+    # impact on the performance, it just makes the output look a big nicer.
+    sleep 1
+    echo "Waiting for stabilize/pull/symbolicate to finish ..."
+    wait
+    echo "Done"
   else
-    cmd_pull ${CMD_SIGNAL_PID} "${B2G_COMMS[${CMD_SIGNAL_PID}]}"
-    if [ ! -z "${CMD_PULL_LOCAL_FILENAME}" -a -s "${CMD_PULL_LOCAL_FILENAME}" ]; then
-      cmd_symbolicate "${CMD_PULL_LOCAL_FILENAME}"
+    pid="${CMD_SIGNAL_PID}"
+    echo "Stabilizing ${pid} ${B2G_COMMS[${pid}]} ..." 1>&2
+    stabilized=$(cmd_stabilize ${pid})
+    if [ "${stabilized}" == "0" ]; then
+      echo "Process ${pid} was probably killed due to OOM" 1>&2
+    else
+      cmd_pull ${pid} "${B2G_COMMS[${pid}]}"
+      if [ ! -z "${CMD_PULL_LOCAL_FILENAME}" -a -s "${CMD_PULL_LOCAL_FILENAME}" ]; then
+        cmd_symbolicate "${CMD_PULL_LOCAL_FILENAME}"
+      fi
     fi
   fi
   # cmd_pull should remove each file as we pull it. This just covers the
@@ -249,16 +268,16 @@ cmd_pull() {
   
   CMD_PULL_LOCAL_FILENAME=
   if [ "${profile_filename}" == "${profile_pattern}" ]; then
-    echo "Profile file for PID ${pid} ${B2G_COMMS[${pid}]} doesn't exist - process likely killed due to OOM"
+    echo "${PREFIX}Profile file for PID ${pid} ${B2G_COMMS[${pid}]} doesn't exist - process likely killed due to OOM"
     return
   fi
-  echo "Pulling ${profile_filename} into ${local_filename}"
-  ${ADB} pull ${profile_filename} "${local_filename}"
-  echo "Removing ${profile_filename}"
+  echo "${PREFIX}Pulling ${profile_filename} into ${local_filename}"
+  ${ADB} pull ${profile_filename} "${local_filename}" > /dev/null 2>&1
+  #echo "${PREFIX}Removing ${profile_filename}"
   ${ADB} shell rm ${profile_filename}
 
   if [ ! -s "${local_filename}" ]; then
-    echo "Profile file for PID ${pid} ${B2G_COMMS[${pid}]} is empty - process likely killed due to OOM"
+    echo "${PREFIX}Profile file for PID ${pid} ${B2G_COMMS[${pid}]} is empty - process likely killed due to OOM"
     return
   fi
   CMD_PULL_LOCAL_FILENAME="${local_filename}"
@@ -297,77 +316,78 @@ cmd_signal() {
 
 ###########################################################################
 #
-# Wait for the captured profile files to stabilize.
+# Wait for a single captured profile files to stabilize.
+#
+# This is somewhat complicated by the fact that writing the files on the
+# phone is sort of serialized. I observe that 2 files actually get changing
+# data, and then when those are finished, 2 more will get data.
+#
+# So when trying to figure out how long to wait for a file to get a
+# non-zero size, we need to wait until no files are changing before starting
+# our timeout.
 #
 
-HELP_stabilzie="Waits for the profile files to stop changing"
+HELP_stabilzie="Waits for a profile file to stop changing"
 cmd_stabilize() {
+
+  local pid=$1
+  if [ -z "$1" ]; then
+    echo "No PID specified." 1>&2
+    return
+  fi
 
   # We wait for the output of ls ${PROFILE_PATTERN} to stay the same for
   # a few seconds in a row
 
   local attempt
-  local prev_ls_output
-  local curr_ls_output
-  local zero_count
+  local prev_size
+  local prev_sizes
+  local curr_size
+  local curr_sizes
   local stabilized=0
   local waiting=0
 
-  echo -n "Waiting for files to stabilize "
   while true; do
-    curr_sizes=$(${ADB} shell ls -l ${PROFILE_PATTERN} | while read line; do
-      echo ${line} | (
-        read perms user group size rest;
-        echo -n "${size} "
-      )
-    done)
-    zero_count=0
-    for size in ${curr_sizes}; do
-      if [ "${size}" == "0" ]; then
-        zero_count=$(( ${zero_count} + 1 ))
+    curr_sizes=$(${ADB} shell ls -l ${PROFILE_DIR}/'profile_?_*.txt' |
+      while read line; do
+        echo ${line} | (
+          read perms user group size rest;
+          echo -n "${size} "
+        )
+      done)
+    curr_size=$(${ADB} shell ls -l ${PROFILE_DIR}/'profile_?_'${pid}'.txt' | (read perms user group size rest; echo -n ${size}))
+    if [ "${curr_size}" == "0" ]; then
+      # Our file hasn't changed. See if others have
+      if [ "${curr_sizes}" == "${prev_sizes}" ]; then
+        echo "${status} waiting=${waiting}"
+        if [ ${waiting} -gt 5 ]; then
+          # No file sizes have changed in the last 5 seconds.
+          # Assume that our PID was OOM'd
+          break
+        fi
+      else
+        waiting=0
       fi
-    done
-    # For debugging the loop, It's convenient to uncomment the following
-    #echo ">${curr_sizes}<"
-    if [ "${prev_sizes}" == "${curr_sizes}" ]; then
-      # No changes detected
-      if [ ${zero_count} -eq 0 ]; then
-        # No changes detected, no zero length files left
-        echo -n "="
-        matches=$(( ${matches} + 1 ))
-        if [ ${matches} -ge 2 ]; then
-          # All of our files have non-zero sizes and haven't
-          # changed, so we now consider them the be stabilized.
+    else
+      # Our file has non-zero size
+      if [ "${curr_size}" == "${prev_size}" ]; then
+        waiting=$(( ${waiting} + 1 ))
+        if [ ${waiting} -gt 2 ]; then
+          # Our size is non-zero and hasn't changed recently.
+          # Consider it to be stabilized
           stabilized=1
           break
         fi
       else
-        # There are some zero length files. We're either waiting
-        # for them, or the process was OOM'd
-        echo -n "."
-        matches=0
-        waiting=$(( ${waiting} + 1 ))
-        if [ ${waiting} -gt 5 ]; then
-          echo "!"
-          break
-        fi
+        waiting=0
       fi
-    else
-      # Something has changed
-      echo -n "${zero_count}"
-      matches=0
-      waiting=0
     fi
-    prev_sizes=${curr_sizes}
+    prev_size="${curr_size}"
+    prev_sizes="${curr_sizes}"
     sleep 1
   done
-  echo
-  if [ "${stabilized}" == "0" ]; then
-    # Whoops. One (or more) process(es) probably got killed (due to OOM)
-    # by trying to collect the profile file.
-    echo "Whoops. Looks like some processes were killed due to OOM..."
-    echo
-  fi
+
+  echo "${stabilized}"
 }
 
 ###########################################################################
@@ -405,26 +425,26 @@ HELP_symbolicate="Add symbols to a captured profile"
 cmd_symbolicate() {
   local profile_filename="$1"
   if [ -z "${profile_filename}" ]; then
-    echo "Expecting the filename containing the profile data"
+    echo "${PREFIX}Expecting the filename containing the profile data"
     exit 1
   fi
   if [ ! -f "${profile_filename}" ]; then
-    echo "File ${profile_filename} doesn't exist"
+    echo "${PREFIX}File ${profile_filename} doesn't exist"
     exit 1
   fi
 
   # Get some variables from the build system
   local var_profile="./.var.profile"
   if [ ! -f ${var_profile} ]; then
-    echo "Unable to locate ${var_profile}"
-    echo "You need to build b2g in order to get symbolic information"
+    echo "${PREFIX}Unable to locate ${var_profile}"
+    echo "${PREFIX}You need to build b2g in order to get symbolic information"
     exit 1
   fi
   source ${var_profile}
 
   local sym_filename="${profile_filename%.*}.sym"
-  echo "Adding symbols to ${profile_filename} and creating ${sym_filename} ..."
-  ./scripts/profile-symbolicate.py -o "${sym_filename}" "${profile_filename}"
+  echo "${PREFIX}Adding symbols to ${profile_filename} and creating ${sym_filename} ..."
+  ./scripts/profile-symbolicate.py -o "${sym_filename}" "${profile_filename}" > /dev/null
 }
 
 ###########################################################################
