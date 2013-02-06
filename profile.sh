@@ -359,7 +359,7 @@ cmd_stabilize() {
     if [ "${curr_size}" == "0" ]; then
       # Our file hasn't changed. See if others have
       if [ "${curr_sizes}" == "${prev_sizes}" ]; then
-        echo "${status} waiting=${waiting}"
+        waiting=$(( ${waiting} + 1 ))
         if [ ${waiting} -gt 5 ]; then
           # No file sizes have changed in the last 5 seconds.
           # Assume that our PID was OOM'd
