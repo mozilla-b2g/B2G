@@ -70,6 +70,7 @@ fi
 
 sleep 1
 echo "set solib-absolute-prefix $SYMDIR" > $GDBINIT
+echo "handle SIGPIPE nostop" >> $GDBINIT
 echo "set solib-search-path $GECKO_OBJDIR/dist/bin:$SYMDIR/system/lib:$SYMDIR/system/lib/hw:$SYMDIR/system/lib/egl:$SYMDIR/system/bin:$GONK_OBJDIR/system/lib:$GONK_OBJDIR/system/lib/egl:$GONK_OBJDIR/system/lib/hw:$GONK_OBJDIR/system/vendor/lib:$GONK_OBJDIR/system/vendor/lib/hw:$GONK_OBJDIR/system/vendor/lib/egl" >> $GDBINIT
 echo "target extended-remote :$GDB_PORT" >> $GDBINIT
 
