@@ -27,12 +27,21 @@ else
     TAIL_ARGS="$TAIL_ARGS -cpu cortex-a8"
 fi
 
+SDCARD_SIZE=${SDCARD_SIZE:-512M}
+SDCARD_IMG=${SDCARD_IMG:-${B2G_HOME}/out/target/product/${DEVICE}/sdcard.img}
+
+if [ ! -f "${SDCARD_IMG}" ]; then
+  echo "Creating sdcard image file with size: ${SDCARD_SIZE} ..."
+  ${TOOLS_PATH}/mksdcard -l sdcard ${SDCARD_SIZE} ${SDCARD_IMG}
+fi
+
 export DYLD_LIBRARY_PATH="$B2G_HOME/out/host/darwin-x86/lib"
 export PATH=$PATH:$TOOLS_PATH
 ${DBG_CMD} $EMULATOR \
    -kernel $KERNEL \
    -sysdir $B2G_HOME/out/target/product/$DEVICE/ \
    -data $B2G_HOME/out/target/product/$DEVICE/userdata.img \
+   -sdcard ${SDCARD_IMG} \
    -memory 512 \
    -partition-size 512 \
    -skindir $B2G_HOME/development/tools/emulator/skins \
