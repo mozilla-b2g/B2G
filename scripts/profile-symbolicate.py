@@ -93,7 +93,7 @@ class Library:
     args = ["find", dir]
     if exclude_dir:
       args = args + ["!", "(", "-name", exclude_dir, "-prune", ")"]
-    args = args + ["-name", basename, "-print", "-quit"]
+    args = args + ["-name", basename, "-type", "f", "-print", "-quit"]
     fullname = subprocess.check_output(args)
     if len(fullname) > 0:
       if fullname[-1] == "\n":
