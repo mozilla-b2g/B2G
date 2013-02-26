@@ -1,6 +1,6 @@
 #!/bin/bash
 
-REPO=./repo
+REPO=${REPO:-./repo}
 
 repo_sync() {
 	rm -rf .repo/manifest* &&
