@@ -52,6 +52,7 @@ function configure_device() {
     return $?
 }
 
+unset CDPATH
 . setup.sh &&
 if [ -f patches/patch.sh ] ; then
     . patches/patch.sh
