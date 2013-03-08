@@ -194,11 +194,11 @@ done
 
 case "$PROJECT" in
 "gecko")
+	run_adb shell stop b2g &&
 	run_adb remount &&
 	delete_extra_gecko_files_on_device &&
 	run_adb push $GECKO_OBJDIR/dist/b2g /system/b2g &&
 	echo Restarting B2G &&
-	run_adb shell stop b2g &&
 	run_adb shell start b2g
 	exit $?
 	;;
