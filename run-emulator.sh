@@ -48,4 +48,5 @@ ${DBG_CMD} $EMULATOR \
    -skin HVGA \
    -verbose \
    -gpu on \
+   -camera-back webcam0 \
    -qemu $TAIL_ARGS
