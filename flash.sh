@@ -223,7 +223,7 @@ case "$PROJECT" in
 esac
 
 case "$DEVICE" in
-"otoro"|"unagi"|"keon")
+"otoro"|"unagi"|"keon"|"inari")
 	flash_fastboot nounlock $PROJECT
 	;;
 
