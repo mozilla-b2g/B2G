@@ -56,7 +56,10 @@ class Library:
       lib_address = int(address_str, 0) - self.start + self.offset
       if self.verbose:
         print "Address %s maps to library '%s' offset 0x%08x" % (address_str, self.host_name, lib_address)
-      args.append("0x%08x" % lib_address)
+      # Fix up addresses from stack frames; they're for the insn after
+      # the call, which might be different function thanks to inlining:
+      adj_address = (lib_address & ~1) - 1
+      args.append("0x%08x" % adj_address)
     # Calling addr2line will return 2 lines for each address. The output will be something
     # like the following:
     #   PR_IntervalNow
