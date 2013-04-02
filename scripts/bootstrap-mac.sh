@@ -208,22 +208,13 @@ bootstrap_mac() {
 }
 
 install_xcode() {
-  if [[ $osx_version == "10.8" ]]; then
-      # In Mountain Lion, you currently need a developer key to get Xcode 4.5.
-      # Let people know this. Once 10.8 is out, we should update to route to
-      # the Mac App Store.
-      echo "You will need to install Xcode 4.4 or Xcode 4.5 to build Boot to Gecko on "
-      prompt_question "Mac OS X 10.8. Would you like to visit the Mac Dev Center to download it? [Y/n] " Y
-      if [[ $answer = Y ]]; then
-        run_command open https://developer.apple.com/devcenter/mac
-      fi
-  elif [[ $osx_version == "10.7" ]]; then
-      # In Lion, we open the Mac App Store for Xcode 4.3.
+  if [[ $osx_version == "10.7" || $osx_version == "10.8" ]]; then
+      # In Lion, we open the Mac App Store for Xcode
       # Opening the App Store is annoying, so ignore option_auto_install here
       echo "You will need to install Xcode 4.3 or newer to build Boot to Gecko on Mac OS X 10.7."
       prompt_question "Do you want to open Xcode in the Mac App Store? [Y/n] " Y
       if [[ $answer = Y ]]; then
-          # Xcode 4.3 iTunes http URL: http://itunes.apple.com/us/app/xcode/id497799835?mt=12
+          # Xcode iTunes http URL: http://itunes.apple.com/us/app/xcode/id497799835?mt=12
           # Mac App Store URL: macappstore://itunes.apple.com/app/id497799835?mt=12
           run_command open macappstore://itunes.apple.com/app/id497799835\?mt\=12
       fi
