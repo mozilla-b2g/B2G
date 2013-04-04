@@ -4,7 +4,7 @@ cd ..
 . setup.sh
 PRODUCT_OUT=$(get_build_var PRODUCT_OUT)
 HOST_OUT=$(get_build_var HOST_OUT)
-TOP=$(pwd)
+OUT_DIR=$(get_abs_build_var OUT_DIR)
 
 EMULATOR_FILES=(\
 	.config \
@@ -25,7 +25,7 @@ EMULATOR_FILES=(\
 	${PRODUCT_OUT}/ramdisk.img \
 	${PRODUCT_OUT}/hardware-qemu.ini)
 
-EMULATOR_ARCHIVE="${TOP}/out/emulator.tar.gz"
+EMULATOR_ARCHIVE="${OUT_DIR}/emulator.tar.gz"
 
 echo "Creating emulator archive at $EMULATOR_ARCHIVE"
 
