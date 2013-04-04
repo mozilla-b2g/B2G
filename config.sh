@@ -115,6 +115,7 @@ case "$1" in
 	echo - inari
 	echo - keon
 	echo - leo
+	echo - hamachi
 	echo - tara
 	echo - pandaboard
 	echo - emulator
