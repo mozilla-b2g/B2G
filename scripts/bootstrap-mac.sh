@@ -208,22 +208,13 @@ bootstrap_mac() {
 }
 
 install_xcode() {
-  if [[ $osx_version == "10.8" ]]; then
-      # In Mountain Lion, you currently need a developer key to get Xcode 4.5.
-      # Let people know this. Once 10.8 is out, we should update to route to
-      # the Mac App Store.
-      echo "You will need to install Xcode 4.4 or Xcode 4.5 to build Boot to Gecko on "
-      prompt_question "Mac OS X 10.8. Would you like to visit the Mac Dev Center to download it? [Y/n] " Y
-      if [[ $answer = Y ]]; then
-        run_command open https://developer.apple.com/devcenter/mac
-      fi
-  elif [[ $osx_version == "10.7" ]]; then
-      # In Lion, we open the Mac App Store for Xcode 4.3.
+  if [[ $osx_version == "10.7" || $osx_version == "10.8" ]]; then
+      # In Lion, we open the Mac App Store for Xcode
       # Opening the App Store is annoying, so ignore option_auto_install here
       echo "You will need to install Xcode 4.3 or newer to build Boot to Gecko on Mac OS X 10.7."
       prompt_question "Do you want to open Xcode in the Mac App Store? [Y/n] " Y
       if [[ $answer = Y ]]; then
-          # Xcode 4.3 iTunes http URL: http://itunes.apple.com/us/app/xcode/id497799835?mt=12
+          # Xcode iTunes http URL: http://itunes.apple.com/us/app/xcode/id497799835?mt=12
           # Mac App Store URL: macappstore://itunes.apple.com/app/id497799835?mt=12
           run_command open macappstore://itunes.apple.com/app/id497799835\?mt\=12
       fi
@@ -243,6 +234,47 @@ install_xcode() {
   echo "  3. If it doesn't, open the Preferences, go to the Downloads panel, and install them."
   echo ""
   echo "Then run this script again to continue configuring to build Boot2Gecko."
+}
+
+download_ten_six_sdk () {
+    dmgpath="$1"
+    echo "You need to download the 10.6 SDK.  To do this, you'll need to download"
+    echo "the Xcode 4.3 installer.  Download it to the default location (~/Downloads)"
+    prompt_question "Do you want to open the Apple Developer Site to download Xcode 4.3? [Y/n] " Y
+    if [[ $answer = Y ]] ; then
+        run_command open https://developer.apple.com/downloads/download.action\?path=Developer_Tools/xcode_4.3_for_lion_21266/xcode_43_lion.dmg
+    fi
+    echo "When this is downloaded, rerun this script.  If you had to download to an"
+    echo "alternate location, use the XCODE43_DMG_LOCATION environment variable"
+}
+
+install_ten_six_sdk () {
+    dmgpath=${XCODE43_DMG_LOCATION:-~/Downloads/xcode_43_lion.dmg}
+    if [[ ! -f $dmgpath ]] ; then
+        download_ten_six_sdk $dmgpath
+        exit 1
+    fi
+    echo "Installing 10.6 sdk"
+    if [ "$option_dry_run" == "yes" ] ; then
+        mp="no_tmp_file_for_dry_run"
+    else
+        mp=$(mktemp -d -t xcode43_mount)
+    fi
+    run_command hdiutil attach "$dmgpath" -mountpoint "$mp"
+    sdk_dir="$mp/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.6.sdk"
+    target="/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/"
+    echo "Beginning to copy SDK over"
+    run_command sudo cp -a "$sdk_dir" "$target"
+    if [ $? -eq 0 ] ; then
+        echo "Done"
+    else
+        echo "Failed to copy 10.6 SDK"
+    fi
+    run_command hdiutil unmount "$mp" &&
+    run_command rm -rf "$mp"
+    if [ $? -ne 0 ] ; then
+        echo "Failed to unmount $dmgpath from $mp"
+    fi
 }
 
 check_xcode() {
@@ -281,6 +313,22 @@ check_xcode() {
       osx_108_sdk=$xcode_dev_path/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.8.sdk
     fi
         
+    test -d $osx_106_sdk
+    if [ $? -ne 0 ] ; then
+        if [ "$option_auto_install" = "no" ]; then
+            echo "You don't have the 10.6 SDK.  This means that you're going to"
+            echo "see lots of error messages and possibly have build issues."
+            prompt_question "Do you want to install it? [Y/n] " Y
+        else
+            echo "Automatically install 10.6 SDK"
+            answer=Y
+        fi
+        if [[ $answer == Y ]] ; then
+            install_ten_six_sdk
+            exit 1
+        fi
+    fi
+
     # Start with the 10.6 SDK and fall back toward newer and newer
     # ones until we find one
     
