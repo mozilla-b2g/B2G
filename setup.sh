@@ -16,5 +16,6 @@ export B2G_NOOPT &&
 export B2G_DEBUG &&
 export MOZ_CHROME_MULTILOCALE &&
 export L10NBASEDIR &&
+export ENABLE_GLOBAL_PRELINK &&
 . build/envsetup.sh &&
 lunch $LUNCH
