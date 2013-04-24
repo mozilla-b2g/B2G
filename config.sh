@@ -76,7 +76,6 @@ case "$1" in
 
 "otoro"|"unagi"|"keon"|"inari"|"leo"|"hamachi")
 	echo DEVICE=$1 >> .tmp-config &&
-	echo ENABLE_GLOBAL_PRELINK=1 >> .tmp-config &&
 	repo_sync $1
 	;;
 
