@@ -22,8 +22,7 @@ EMULATOR_FILES=(\
 	${PRODUCT_OUT}/system/build.prop \
 	${PRODUCT_OUT}/system.img \
 	${PRODUCT_OUT}/userdata.img \
-	${PRODUCT_OUT}/ramdisk.img \
-	${PRODUCT_OUT}/hardware-qemu.ini)
+	${PRODUCT_OUT}/ramdisk.img)
 
 EMULATOR_ARCHIVE="${OUT_DIR}/emulator.tar.gz"
 
