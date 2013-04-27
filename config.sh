@@ -114,6 +114,7 @@ case "$1" in
 	echo - unagi
 	echo - inari
 	echo - keon
+	echo - peak
 	echo - leo
 	echo - hamachi
 	echo - tara
