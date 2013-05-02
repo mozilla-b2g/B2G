@@ -32,7 +32,11 @@ and talk to us on IRC:
 * bison
 * flex
 * 32bit ncurses
-* 32bit zlib
+* zlib
+  * You need both zlib1g and zlib1g-dev for both i386 and amd64. That is, for
+    Ubuntu 12.04 Precise or older, they are zlib1g, zlib1g-dev, zlib1g:i386, and
+    zlib1g-dev:i386; for Ubuntu 12.10 Quantal or newer, they are zlib1g:amd64,
+    zlib1g-dev:amd64, zlib1g:i386, and zlib1g-dev:i386.
 * make
 
 Additionally, if you're building the emulator, you probably need the the Mesa
@@ -45,6 +49,15 @@ early in the process.  To use gcc 4.6, edit .userconfig and add
     export CXX=g++-4.6
 
 Of course, you'll need the g++-4.6 package installed.
+
+On Ubuntu 13.04, for example, you might find `apt-get install zlib1g{,-dev}:i386`
+is going to do something seriously wrong like removing all your toolchain
+packages. You may execute either `apt-get install --no-install-recommends <packages>`
+to explicitly disallow installing recommended packages, or `aptitude` to
+interactively select the very necessary packages you need.
+
+For full lists of minimum required packages that build B2G emulator on all
+recent Ubuntu releases, see https://bugzilla.mozilla.org/show_bug.cgi?id=866489 .
 
 ### OSX
 
