@@ -14,6 +14,9 @@ def remote_shell(cmd):
     '''Run the given command on on the device and return stdout.  Throw an
     exception if the remote command returns a non-zero return code.
 
+    Don't use this command for programs included in /system/bin/toolbox, such
+    as ls and ps; instead, use remote_toolbox_cmd.
+
     adb shell doesn't check the remote command's error code.  So to check this
     ourselves, we echo $? after running the command and then strip that off
     before returning the command's output.
@@ -34,6 +37,23 @@ def remote_shell(cmd):
     if cmd_out:
         print(cmd_out, file=sys.stderr)
     raise subprocess.CalledProcessError(retcode, cmd, cmd_out)
+
+def remote_toolbox_cmd(cmd, args=''):
+    '''Run the given command from /system/bin/toolbox on the device.  Pass
+    args, if specified, and return stdout.  Throw an exception if the command
+    returns a non-zero return code.
+
+    cmd must be a command that's part of /system/bin/toolbox.  If you want to
+    run an arbitrary command, use remote_shell.
+
+    Use remote_toolbox_cmd instead of remote_shell if you're invoking a program
+    that's included in /system/bin/toolbox.  remote_toolbox_cmd will ensure
+    that we use the toolbox's version, instead of busybox's version, even if
+    busybox is installed on the system.  This will ensure that we get
+    the same output regardless of whether busybox is installed.
+
+    '''
+    return remote_shell('/system/bin/toolbox "%s" %s' % (cmd, args))
 
 def shell(cmd, cwd=None, show_errors=True):
     '''Run the given command as a shell script on the host machine.
@@ -87,7 +107,7 @@ def get_remote_b2g_pids():
     Returns a tuple (master_pid, child_pids), where child_pids is a list.
 
     '''
-    procs = remote_shell('ps').split('\n')
+    procs = remote_toolbox_cmd('ps').split('\n')
     master_pid = None
     child_pids = []
     for line in procs:
@@ -192,8 +212,9 @@ def _send_remote_signal(signal, pid):
 def _list_remote_temp_files(prefixes):
     '''Return a set of absolute filenames in the device's temp directory which
     start with one of the given prefixes.'''
+
     return set(['/data/local/tmp/' + f.strip() for f in
-                remote_shell('ls /data/local/tmp').split('\n')
+                remote_toolbox_cmd('ls', '/data/local/tmp').split('\n')
                 if any([f.strip().startswith(prefix) for prefix in prefixes])])
 
 def _wait_for_remote_files(outfiles_prefixes, num_expected_files, old_files):
@@ -252,4 +273,4 @@ def _remove_files_from_device(outfiles_prefixes, old_files):
     files_to_remove = _list_remote_temp_files(outfiles_prefixes) - old_files
 
     # Hopefully this command line won't get too long for ADB.
-    remote_shell('rm %s' % ' '.join([str(f) for f in files_to_remove]))
+    remote_toolbox_cmd('rm', ' '.join([str(f) for f in files_to_remove]))
