@@ -119,6 +119,13 @@ bootstrap_mac() {
         echo "Found yasm: $yasm"
     fi
 
+    cmake=`which cmake`
+    if [ $? -ne 0 ]; then
+        homebrew_formulas+=" cmake:cmake"
+    else
+        echo "Found cmake: $cmake"
+    fi
+
     found_autoconf213=1
     autoconf213=`which autoconf213`
     if [ $? -ne 0 ]; then
