@@ -1,4 +1,5 @@
 #!/bin/bash
+#set -x
 
 SCRIPT_NAME=$(basename $0)
 . load-config.sh
@@ -6,7 +7,7 @@ SCRIPT_NAME=$(basename $0)
 ADB=adb
 GDB=${GDB:-prebuilt/$(uname -s | tr "[[:upper:]]" "[[:lower:]]")-x86/toolchain/arm-linux-androideabi-4.4.x/bin/arm-linux-androideabi-gdb}
 B2G_BIN=/system/b2g/b2g
-GDBINIT=/tmp/b2g.gdbinit.$(whoami)
+GDBINIT=/tmp/b2g.gdbinit.$(whoami).$$
 
 GONK_OBJDIR=out/target/product/$DEVICE
 SYMDIR=$GONK_OBJDIR/symbols
@@ -76,6 +77,14 @@ echo "target extended-remote :$GDB_PORT" >> $GDBINIT
 
 PROG=$GECKO_OBJDIR/dist/bin/$(basename $B2G_BIN)
 [ -f $PROG ] || PROG=${SYMDIR}${B2G_BIN}
+
+if [[ "$-" == *x* ]]; then
+    # Since we got here, set -x was enabled near the top of the file. print
+    # out the contents of of the gdbinit file.
+    echo "----- Start of $GDBINIT -----"
+    cat $GDBINIT
+    echo "----- End of $GDBINIT -----"
+fi
 
 if [ "$SCRIPT_NAME" == "run-ddd.sh" ]; then
     echo "ddd --debugger \"$GDB -x $GDBINIT\" $PROG"
