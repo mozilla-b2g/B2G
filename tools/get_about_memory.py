@@ -150,9 +150,10 @@ def get_dumps(args):
     # Do this function inside a try/catch which will delete out_dir if the
     # function throws and out_dir is empty.
     def do_work():
-        signal = 'SIGRT0' if not args.minimize_memory_usage else 'SIGRT1'
-        new_files = utils.send_signal_and_pull_files(
-            signal=signal,
+        fifo_msg = 'memory report' if not args.minimize_memory_usage else \
+                   'minimize memory report'
+        new_files = utils.notify_and_pull_files(
+            fifo_msg=fifo_msg,
             outfiles_prefixes=['memory-report-'],
             remove_outfiles_from_device=not args.leave_on_device,
             out_dir=out_dir,
