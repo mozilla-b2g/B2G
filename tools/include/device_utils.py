@@ -20,7 +20,7 @@ def remote_shell(cmd):
     adb shell doesn't check the remote command's error code.  So to check this
     ourselves, we echo $? after running the command and then strip that off
     before returning the command's output.
-    
+
     '''
     out = shell(r"""adb shell '%s; echo -n "\n$?"'""" % cmd)
 
@@ -54,6 +54,10 @@ def remote_toolbox_cmd(cmd, args=''):
 
     '''
     return remote_shell('/system/bin/toolbox "%s" %s' % (cmd, args))
+
+def remote_ls(dir):
+    '''Run ls on the remote device, and return a set containing the results.'''
+    return {f.strip() for f in remote_toolbox_cmd('ls', dir).split('\n')}
 
 def shell(cmd, cwd=None, show_errors=True):
     '''Run the given command as a shell script on the host machine.
@@ -247,9 +251,15 @@ def _list_remote_temp_files(prefixes):
     '''Return a set of absolute filenames in the device's temp directory which
     start with one of the given prefixes.'''
 
-    return set(['/data/local/tmp/' + f.strip() for f in
-                remote_toolbox_cmd('ls', '/data/local/tmp').split('\n')
-                if any([f.strip().startswith(prefix) for prefix in prefixes])])
+    tmpdir = '/data/local/tmp/'
+    outdir = os.path.join(tmpdir, 'memory-reports')
+
+    # Check that outdir exists.  If not, return the empty set.
+    if 'memory-reports' not in remote_ls(tmpdir):
+        return set()
+
+    return {os.path.join(outdir, f) for f in remote_ls(outdir)
+            if any(f.startswith(prefix) for prefix in prefixes)}
 
 def _wait_for_remote_files(outfiles_prefixes, num_expected_files, old_files):
     '''Wait for files to appear on the remote device.
