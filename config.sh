@@ -18,7 +18,8 @@ repo_sync() {
 
 case `uname` in
 "Darwin")
-	CORE_COUNT=`system_profiler SPHardwareDataType | grep "Cores:" | sed -e 's/[ a-zA-Z:]*\([0-9]*\)/\1/'`
+	# Should also work on other BSDs
+	CORE_COUNT=`sysctl -n hw.ncpu`
 	;;
 "Linux")
 	CORE_COUNT=`grep processor /proc/cpuinfo | wc -l`
