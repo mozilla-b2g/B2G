@@ -72,11 +72,12 @@ recent Ubuntu releases, see https://bugzilla.mozilla.org/show_bug.cgi?id=866489 
   * ccache
   * autoconf-2.13 - brew install https://raw.github.com/Homebrew/homebrew-versions/master/autoconf213.rb
 
-#### Note: Some devices require case-sensitive file systems
+#### Note: Builds for some devices require case-sensitive file systems
 
 Some B2G subrepositories contain files whose names differ only in case.
 This causes build failures when building for some target phones (such as the
-Hamachi).  You'll see an error like the following during the ./build.sh step:
+Hamachi) if you're on a case-insensitive FS (the default on Mac).  You'll see
+an error like the following during the ./build.sh step:
 
 > [entering kernel]
 > ERROR: You have uncommited changes in kernel
@@ -110,7 +111,7 @@ Follow these steps:
 
 2. In .userconfig, add the following line.
 
-    export TARGET_TOOLS_PREFIX=/path/to/b2g-toolchain-prebuilt/toolchain-4.4.3/x86_64-apple-darwin/bin/arm-linux-androideabi-
+        export TARGET_TOOLS_PREFIX=/path/to/b2g-toolchain-prebuilt/toolchain-4.4.3/x86_64-apple-darwin/bin/arm-linux-androideabi-
 
   (Of course, replace /path/to/b2g-toolchain-prebuilt/ with the actual path.)
 
