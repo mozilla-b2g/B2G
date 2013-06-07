@@ -1,3 +1,6 @@
+TODO: Add info about linker error.
+TODO: Add info about building on MacOS with a case-sensitive FS.
+
 # Boot to Gecko (B2G)
 
 Boot to Gecko aims to create a complete, standalone operating system for the open web.
@@ -69,11 +72,51 @@ recent Ubuntu releases, see https://bugzilla.mozilla.org/show_bug.cgi?id=866489 
   * ccache
   * autoconf-2.13 - brew install https://raw.github.com/Homebrew/homebrew-versions/master/autoconf213.rb
 
-Note: Some B2G subrepositories contain files whose names differ only in case.
-Amazingly, the build seems to work properly on OSX case-insensitive file
-systems, despite this.  But if you do |./repo status|, you'll see lots of
-spurrious "modified files" corresponding to these pairs of files whose names
-differ only in case.  Try not to worry about it.
+#### Note: Some devices require case-sensitive file systems
+
+Some B2G subrepositories contain files whose names differ only in case.
+This causes build failures when building for some target phones (such as the
+Hamachi).  You'll see an error like the following during the ./build.sh step:
+
+> [entering kernel]
+> ERROR: You have uncommited changes in kernel
+> You may force overwriting these changes
+> with |source build/envsetup.sh force|
+> 
+> ERROR: Patching of kernel/ failed.
+
+If you hit this error, the easiest way around it is to build on a
+case-sensitive file-system.  Doing so doesn't require any re-partitioning; you
+can simply create a disk image and build within it using the following
+commands.
+
+    hdiutil create -volname 'firefoxos' -type SPARSE -fs 'Case-sensitive Journaled HFS+' -size 40g ~/firefoxos.sparseimage
+    open ~/firefoxos.sparseimage
+    cd /Volumes/firefoxos/
+
+See https://bugzilla.mozilla.org/show_bug.cgi?id=867259 for details.
+
+#### Note: Linker OOM with noopt builds
+
+If you build with B2G_NOOPT=1 on MacOS, your linker may run out of memory and
+crash.
+
+The solution, if you really want a noopt build, is to use a 64-bit linker.
+Follow these steps:
+
+1. Clone this repository somewhere
+
+    $ git://github.com/jld/b2g-toolchain-prebuilt.git
+
+2. In .userconfig, add the following line.
+
+    export TARGET_TOOLS_PREFIX=/path/to/b2g-toolchain-prebuilt/toolchain-4.4.3/x86_64-apple-darwin/bin/arm-linux-androideabi-
+
+  (Of course, replace /path/to/b2g-toolchain-prebuilt/ with the actual path.)
+
+3. Rebuild.
+
+See https://bugzilla.mozilla.org/show_bug.cgi?id=854535 for details.
 
 ## Configure
 
