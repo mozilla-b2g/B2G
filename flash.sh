@@ -66,7 +66,14 @@ fastboot_flash_image()
 
 flash_fastboot()
 {
-	run_adb reboot bootloader ;
+	case $DEVICE in
+	"helix")
+		run_adb reboot oem-1
+		;;
+	*)
+		run_adb reboot bootloader
+		;;
+	esac
 	run_fastboot devices &&
 	( [ "$1" = "nounlock" ] || run_fastboot oem unlock || true )
 
@@ -81,8 +88,14 @@ flash_fastboot()
 		;;
 
 	*)
-		run_fastboot erase cache &&
-		run_fastboot erase userdata &&
+		# helix doesn't support erase command in fastboot mode.
+		if [ "$DEVICE" != "helix" ]; then
+			run_fastboot erase cache &&
+			run_fastboot erase userdata
+			if [ $? -ne 0 ]; then
+				return $?
+			fi
+		fi
 		fastboot_flash_image userdata &&
 		([ ! -e out/target/product/$DEVICE/boot.img ] ||
 		fastboot_flash_image boot) &&
@@ -223,7 +236,7 @@ case "$PROJECT" in
 esac
 
 case "$DEVICE" in
-"otoro"|"unagi"|"keon"|"peak"|"inari"|"leo"|"hamachi"|"sp8810ea")
+"otoro"|"unagi"|"keon"|"peak"|"inari"|"leo"|"hamachi"|"sp8810ea"|"helix")
 	flash_fastboot nounlock $PROJECT
 	;;
 

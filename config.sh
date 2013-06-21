@@ -96,7 +96,7 @@ case "$1" in
 	repo_sync $1
 	;;
 
-"otoro"|"unagi"|"keon"|"inari"|"leo"|"hamachi"|"peak")
+"otoro"|"unagi"|"keon"|"inari"|"leo"|"hamachi"|"peak"|"helix")
 	echo DEVICE=$1 >> .tmp-config &&
 	repo_sync $1
 	;;
@@ -140,6 +140,7 @@ case "$1" in
 	echo - peak
 	echo - leo
 	echo - hamachi
+	echo - helix
 	echo - tara
 	echo - pandaboard
 	echo - emulator
