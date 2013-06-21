@@ -81,6 +81,11 @@ case "$1" in
 	repo_sync $1
 	;;
 
+"nexus-4")
+	echo DEVICE=mako >> .tmp-config &&
+	repo_sync nexus-4
+	;;
+
 "optimus-l5")
 	echo DEVICE=m4 >> .tmp-config &&
 	repo_sync $1
@@ -112,7 +117,7 @@ case "$1" in
 	repo_sync $1
 	;;
 
-"emulator")
+"emulator"|"emulator-jb")
 	echo DEVICE=generic >> .tmp-config &&
 	echo LUNCH=full-eng >> .tmp-config &&
 	repo_sync $1
@@ -131,6 +136,7 @@ case "$1" in
 	echo Valid devices to configure are:
 	echo - galaxy-s2
 	echo - galaxy-nexus
+	echo - nexus-4
 	echo - nexus-s
 	echo - nexus-s-4g
 	echo - otoro
@@ -144,6 +150,7 @@ case "$1" in
 	echo - tara
 	echo - pandaboard
 	echo - emulator
+	echo - emulator-jb
 	echo - emulator-x86
 	exit -1
 	;;
