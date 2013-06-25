@@ -132,6 +132,7 @@ def pull_procrank_etc(out_dir):
     it into out_dir.
 
     '''
+    shell('adb shell b2g-info > b2g-info', cwd=out_dir)
     shell('adb shell procrank > procrank', cwd=out_dir)
     shell('adb shell b2g-ps > b2g-ps', cwd=out_dir)
     shell('adb shell b2g-procrank > b2g-procrank', cwd=out_dir)
