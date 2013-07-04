@@ -217,6 +217,28 @@ def get_and_show_dump(args):
 
     process_dmd_files(dmd_files, args)
 
+def get_gc_logs(args):
+    if args.output_directory:
+        out_dir = utils.create_specific_output_dir(args.output_directory)
+    else:
+        out_dir = utils.create_new_output_dir('gc-logs-')
+
+    def do_work():
+        fifo_msg = 'gc log'
+        new_files = utils.notify_and_pull_files(
+          fifo_msg=fifo_msg,
+          outfiles_prefixes=['gc-edges.', 'cc-edges.'],
+          remove_outfiles_from_device=not args.leave_on_device,
+          out_dir=out_dir)
+
+        utils.pull_procrank_etc(out_dir)
+
+    utils.run_and_delete_dir_on_exception(do_work, out_dir)
+
+    print(textwrap.fill(textwrap.dedent('''\
+        Hopefully you know how to use this
+        data.  If not, try asking Andrew Mccreight.''')))
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -224,6 +246,10 @@ if __name__ == '__main__':
     parser.add_argument('--minimize', '-m', dest='minimize_memory_usage',
         action='store_true', default=False,
         help='Minimize memory usage before collecting the memory reports.')
+
+    parser.add_argument('--gc-logs', dest='gc_logs',
+        action='store_true', default=False,
+        help='Get GC/CC logs instead of memory reports.')
 
     parser.add_argument('--directory', '-d', dest='output_directory',
         action='store', metavar='DIR',
@@ -256,4 +282,8 @@ if __name__ == '__main__':
     fix_b2g_stack.add_argparse_arguments(dmd_group)
 
     args = parser.parse_args()
-    get_and_show_dump(args)
+
+    if (not args.gc_logs):
+        get_and_show_dump(args)
+    else:
+        get_gc_logs(args)
