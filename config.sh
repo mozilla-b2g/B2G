@@ -123,7 +123,7 @@ case "$1" in
 	repo_sync $1
 	;;
 
-"emulator-x86")
+"emulator-x86"|"emulator-x86-jb")
 	echo DEVICE=generic_x86 >> .tmp-config &&
 	echo LUNCH=full_x86-eng >> .tmp-config &&
 	repo_sync emulator
@@ -152,6 +152,7 @@ case "$1" in
 	echo - emulator
 	echo - emulator-jb
 	echo - emulator-x86
+	echo - emulator-x86-jb
 	exit -1
 	;;
 esac
