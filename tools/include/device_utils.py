@@ -252,15 +252,20 @@ def _list_remote_temp_files(prefixes):
     '''Return a set of absolute filenames in the device's temp directory which
     start with one of the given prefixes.'''
 
+    # Look for files in both /data/local/tmp/ and
+    # /data/local/tmp/memory-reports.  New versions of b2g dump everything into
+    # /data/local/tmp/memory-reports, but old versions use /data/local/tmp for
+    # some things (e.g. gc/cc logs).
     tmpdir = '/data/local/tmp/'
-    outdir = os.path.join(tmpdir, 'memory-reports')
+    outdirs = [d for d in [tmpdir, os.path.join(tmpdir, 'memory-reports')] if
+               os.path.basename(d) in remote_ls(os.path.dirname(d))]
 
-    # Check that outdir exists.  If not, return the empty set.
-    if 'memory-reports' not in remote_ls(tmpdir):
-        return set()
+    found_files = set()
+    for d in outdirs:
+        found_files |= {os.path.join(d, file) for file in remote_ls(d)
+                        if any(file.startswith(prefix) for prefix in prefixes)}
 
-    return {os.path.join(outdir, f) for f in remote_ls(outdir)
-            if any(f.startswith(prefix) for prefix in prefixes)}
+    return found_files
 
 def _wait_for_remote_files(outfiles_prefixes, num_expected_files, old_files):
     '''Wait for files to appear on the remote device.
