@@ -39,7 +39,7 @@ import fix_b2g_stack
 
 def process_dmd_files(dmd_files, args):
     '''Run fix_b2g_stack.py on each of these files.'''
-    if not dmd_files:
+    if not dmd_files or args.no_dmd:
         return
 
     print()
@@ -181,7 +181,7 @@ def get_dumps(args):
 def get_and_show_info(args):
     (out_dir, merged_reports_path, dmd_files) = get_dumps(args)
 
-    if dmd_files:
+    if dmd_files and not args.no_dmd:
         print('Got %d DMD dump(s).' % len(dmd_files))
 
     # Try to open the dump in Firefox.
@@ -275,6 +275,9 @@ if __name__ == '__main__':
         action='store_true',
         default=False,
         help='Get an abbreviated GC/CC log, instead of a full one.')
+
+    parser.add_argument('--no-dmd', action='store_true', default=False,
+        help='''Don't process DMD logs, even if they're available.''')
 
     dmd_group = parser.add_argument_group('optional DMD args (passed to fix_b2g_stack)',
         textwrap.dedent('''\
