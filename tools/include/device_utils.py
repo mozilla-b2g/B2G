@@ -22,11 +22,11 @@ def remote_shell(cmd):
     before returning the command's output.
 
     '''
-    out = shell(r"""adb shell '%s; echo -n "\n$?"'""" % cmd)
+    out = shell(r"""adb shell '%s; echo -n "|$?"'""" % cmd)
 
     # The final '\n' in |out| separates the command output from the return
     # code.  (There's no newline after the return code because we did echo -n.)
-    (cmd_out, _, retcode) = out.rpartition('\n')
+    (cmd_out, _, retcode) = out.rpartition('|')
     retcode = retcode.strip()
 
     if retcode == '0':
