@@ -89,9 +89,13 @@ flash_fastboot()
 
 	*)
 		# helix doesn't support erase command in fastboot mode.
+		VERB="erase"
+		if [ "$DEVICE" == "mako" ]; then
+			VERB="format"
+		fi
 		if [ "$DEVICE" != "helix" ]; then
-			run_fastboot erase cache &&
-			run_fastboot erase userdata
+			run_fastboot $VERB cache &&
+			run_fastboot $VERB userdata
 			if [ $? -ne 0 ]; then
 				return $?
 			fi
@@ -236,7 +240,7 @@ case "$PROJECT" in
 esac
 
 case "$DEVICE" in
-"otoro"|"unagi"|"keon"|"peak"|"inari"|"leo"|"hamachi"|"sp8810ea"|"helix"|"wasabi")
+"otoro"|"unagi"|"keon"|"peak"|"inari"|"leo"|"hamachi"|"sp8810ea"|"helix"|"wasabi"|"mako")
 	flash_fastboot nounlock $PROJECT
 	;;
 
