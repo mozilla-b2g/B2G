@@ -240,23 +240,11 @@ case "$PROJECT" in
 esac
 
 case "$DEVICE" in
-"otoro"|"unagi"|"keon"|"peak"|"inari"|"leo"|"hamachi"|"sp8810ea"|"helix"|"wasabi"|"mako")
+"otoro"|"unagi"|"keon"|"peak"|"inari"|"leo"|"hamachi"|"sp8810ea"|"helix"|"wasabi")
 	flash_fastboot nounlock $PROJECT
 	;;
 
-"panda")
-	flash_fastboot unlock $PROJECT
-	;;
-
-"maguro")
-	flash_fastboot unlock $PROJECT
-	;;
-
-"m4")
-	flash_fastboot unlock $PROJECT
-	;;
-
-"crespo"|"crespo4g")
+"panda"|"maguro"|"m4"|"crespo"|"crespo4g"|"mako")
 	flash_fastboot unlock $PROJECT
 	;;
 
