@@ -227,9 +227,7 @@ case "$PROJECT" in
 		# Gaia's build takes care of remounting /system for production builds
 		GAIA_MAKE_FLAGS+=" PRODUCTION=1"
 	fi
-
 	make -C gaia install-gaia $GAIA_MAKE_FLAGS
-	make -C gaia install-media-samples $GAIA_MAKE_FLAGS
 	exit $?
 	;;
 
