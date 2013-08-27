@@ -126,7 +126,7 @@ case "$1" in
 "emulator-x86"|"emulator-x86-jb")
 	echo DEVICE=generic_x86 >> .tmp-config &&
 	echo LUNCH=full_x86-eng >> .tmp-config &&
-	repo_sync emulator
+	repo_sync $1
 	;;
 
 *)
