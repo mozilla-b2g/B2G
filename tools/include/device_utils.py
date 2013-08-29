@@ -322,5 +322,5 @@ def _remove_files_from_device(outfiles_prefixes, old_files):
     '''
     files_to_remove = _list_remote_temp_files(outfiles_prefixes) - old_files
 
-    # Hopefully this command line won't get too long for ADB.
-    remote_toolbox_cmd('rm', ' '.join([str(f) for f in files_to_remove]))
+    for f in files_to_remove:
+        remote_toolbox_cmd('rm', f)
