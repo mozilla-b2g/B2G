@@ -364,10 +364,12 @@ class StackFixer(object):
     faster.
 
     '''
+
+    _addr2line_procs = {}
+
     def __init__(self, options):
         self._lib_path_cache = defaultdict(list)
         self._cache = StackFixerCache(options)
-        self._addr2line_procs = {}
         self._options = options
 
     def translate(self, lib, offset, pc=None, fn_guess=None):
@@ -457,15 +459,15 @@ class StackFixer(object):
             _fn_guess = fn_guess + ' ' if fn_guess and fn_guess != '???' else ''
             return '%s%s' % (_fn_guess, addr_str())
 
-        if lib not in self._addr2line_procs:
+        if lib not in StackFixer._addr2line_procs:
             lib_path = self._find_lib(lib)
             if not lib_path:
                 return "%s (can't find lib)" % fallback_str()
-            self._addr2line_procs[lib] = subprocess.Popen(
+            StackFixer._addr2line_procs[lib] = subprocess.Popen(
                 [self._options.cross_bin('addr2line'), '-Cfe', lib_path],
                 stdin=subprocess.PIPE, stdout=subprocess.PIPE)
 
-        proc = self._addr2line_procs[lib]
+        proc = StackFixer._addr2line_procs[lib]
         try:
             proc.stdin.write('0x%x\n' % offset)
             proc.stdin.flush()
