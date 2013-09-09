@@ -9,7 +9,17 @@ SCRIPT_NAME=$(basename $0)
 . load-config.sh
 
 ADB=adb
-GDB=${GDB:-prebuilt/$(uname -s | tr "[[:upper:]]" "[[:lower:]]")-x86/toolchain/arm-linux-androideabi-4.4.x/bin/arm-linux-androideabi-gdb}
+if [ -z "${GDB}" ]; then
+   if [ -d prebuilt ]; then
+      GDB=prebuilt/$(uname -s | tr "[[:upper:]]" "[[:lower:]]")-x86/toolchain/arm-linux-androideabi-4.4.x/bin/arm-linux-androideabi-gdb
+   elif [ -d prebuilts ]; then
+      GDB=prebuilts/gcc/$(uname -s | tr "[[:upper:]]" "[[:lower:]]")-x86/arm/arm-linux-androideabi-4.7/bin/arm-linux-androideabi-gdb
+   else
+      echo "Not sure where gdb is located. Override using GDB= or fix the script."
+      exit 1
+   fi
+fi
+
 B2G_BIN=/system/b2g/b2g
 GDBINIT=/tmp/b2g.gdbinit.$(whoami).$$
 
