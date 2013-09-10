@@ -17,7 +17,8 @@ fi
 
 case "$FRONTEND" in
   mochitest)
-    SCRIPT=$B2G_HOME/scripts/mochitest.sh ;;
+    echo "Use ./mach mochitest-remote to run tests;"
+    echo "use ./mach help mochitest-remote for options." ;;
   marionette)
     SCRIPT=$B2G_HOME/scripts/marionette.sh ;;
   updates)
