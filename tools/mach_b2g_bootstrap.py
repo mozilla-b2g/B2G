@@ -186,6 +186,8 @@ def bootstrap(b2g_home):
     gaia_dir = os.path.join(b2g_home, 'gaia')
     if os.path.isdir(gaia_dir):
         xre_path = os.path.join(_find_xulrunner_sdk(gaia_dir), 'bin')
+        if sys.platform.startswith('darwin'):
+            xre_path = os.path.join(xre_path, 'XUL.framework', 'Versions', 'Current')
 
     def populate_context(context):
         context.state_dir = state_dir
