@@ -58,7 +58,7 @@ get_pids() {
     return
   fi
 
-  B2G_PIDS=($(${ADB} shell ps | while read line; do
+  B2G_PIDS=($(${ADB} shell toolbox ps | while read line; do
     if [ "${line/*b2g*/b2g}" = "b2g" ]; then
       echo ${line} | (
         read user pid rest;
@@ -348,14 +348,14 @@ cmd_stabilize() {
   local waiting=0
 
   while true; do
-    curr_sizes=$(${ADB} shell ls -l ${PROFILE_DIR}/'profile_?_*.txt' |
+    curr_sizes=$(${ADB} shell toolbox ls -l ${PROFILE_DIR}/'profile_?_*.txt' |
       while read line; do
         echo ${line} | (
           read perms user group size rest;
           echo -n "${size} "
         )
       done)
-    curr_size=$(${ADB} shell ls -l ${PROFILE_DIR}/'profile_?_'${pid}'.txt' | (read perms user group size rest; echo -n ${size}))
+    curr_size=$(${ADB} shell toolbox ls -l ${PROFILE_DIR}/'profile_?_'${pid}'.txt' | (read perms user group size rest; echo -n ${size}))
     if [ "${curr_size}" == "0" ]; then
       # Our file hasn't changed. See if others have
       if [ "${curr_sizes}" == "${prev_sizes}" ]; then
