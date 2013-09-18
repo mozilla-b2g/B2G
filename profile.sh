@@ -15,6 +15,27 @@ declare -a B2G_PIDS
 # pids to comms (process names). get_comms also causes B2G_PIDS to be populated.
 declare -a B2G_COMMS
 
+# This function takes a variable that is either a pid or a process name
+# and returns the pid or exits on error
+get_pid_by_pid_or_name() {
+    pid="$1"
+    case $pid in
+      *[^0-9]*)
+        pid=$(get_pid_by_name "$pid")
+        if [ -z "$pid" ] ; then
+          echo Error: PID $1 is invalid
+          exit 1;
+        fi
+      ;;
+    esac
+    echo -n "$pid"
+    return
+}
+
+get_pid_by_name() {
+    echo $($ADB shell "toolbox ps '$1' | (read header; read user pid rest; echo -n \$pid)")
+}
+
 ###########################################################################
 #
 # Clears the B2G_PIDS, which will force the information to be refetched.
@@ -96,7 +117,7 @@ is_profiler_running() {
   if [ -z "${pid}" ]; then
     return 1
   fi
-  local status="$(${ADB} shell cat /proc/${pid}/environ | tr '\0' '\n' | grep 'MOZ_PROFILER_STARTUP=1')"
+  local status="$(${ADB} shell cat /proc/${pid}/task/*/stat | tr '\0' '\n' | grep '(SamplerThread)')"
   if [ -z "${status}" ]; then
     return 1
   fi
@@ -166,16 +187,28 @@ cmd_capture() {
     wait
     echo "Done"
   else
-    pid="${CMD_SIGNAL_PID}"
-    echo "Stabilizing ${pid} ${B2G_COMMS[${pid}]} ..." 1>&2
-    stabilized=$(cmd_stabilize ${pid})
-    if [ "${stabilized}" == "0" ]; then
-      echo "Process ${pid} was probably killed due to OOM" 1>&2
-    else
-      cmd_pull ${pid} "${B2G_COMMS[${pid}]}"
-      if [ ! -z "${CMD_PULL_LOCAL_FILENAME}" -a -s "${CMD_PULL_LOCAL_FILENAME}" ]; then
-        cmd_symbolicate "${CMD_PULL_LOCAL_FILENAME}"
+    pids="${CMD_SIGNAL_PID}"
+    profiles_count=0
+    profiles_to_merge=""
+    for pid in $pids; do
+      echo "Stabilizing ${pid} ${B2G_COMMS[${pid}]} ..." 1>&2
+      stabilized=$(cmd_stabilize ${pid})
+      if [ "${stabilized}" == "0" ]; then
+        echo "Process ${pid} was probably killed due to OOM" 1>&2
+      else
+        cmd_pull ${pid} "${B2G_COMMS[${pid}]}"
+        if [ ! -z "${CMD_PULL_LOCAL_FILENAME}" -a -s "${CMD_PULL_LOCAL_FILENAME}" ]; then
+          cmd_symbolicate "${CMD_PULL_LOCAL_FILENAME}"
+          profiles_to_merge="$profiles_to_merge $CMD_SYMBOLICATE_PROFILE"
+          let profiles_count=profiles_count+1
+        fi
       fi
+    done
+    if [ $profiles_count -gt 1 ]; then
+      echo "Merging profile:$profiles_to_merge"
+      ./gecko/tools/profiler/merge-profiles.py $profiles_to_merge > profile_captured.sym
+      echo ""
+      echo "Results: profile_captured.sym"
     fi
   fi
   # cmd_pull should remove each file as we pull it. This just covers the
@@ -246,6 +279,11 @@ cmd_pull() {
   local comm=$2
   local label=$3
 
+  pid=$(get_pid_by_pid_or_name "$pid") || {
+    echo "Could not find pid: $1"
+    exit 1;
+  }
+
   # The profile data gets written to /data/local/tmp/profile_X_PID.txt
   # where X is the XRE_ProcessType (so 0 for the b2g process, 2 for
   # the plugin containers).
@@ -295,11 +333,19 @@ cmd_signal() {
   # then find_pid will see the results of us calling get_comms.
   get_comms
   local pid
+  local curr_pid
   if [ -z "$1" ]; then
-    # If no pid is specified, then send a signal to the b2g process group.
-    # This will cause the signal to go to b2g and all of it subprocesses.
-    pid=-$(find_pid b2g)
-    echo "Signalling Process Group: ${pid:1} ${B2G_COMMS[${pid:1}]} ..."
+    for curr_pid in ${B2G_PIDS[*]}; do
+      if is_profiler_running ${curr_pid}; then
+        pid="${pid} ${curr_pid}"
+      fi
+    done
+    if [ -z "$pid" ]; then
+      echo "Not profiling any processes to signal"
+      echo "Did you start the profiler using ${SCRIPT_NAME} start ?"
+      exit 1
+    fi
+    echo "Signaling Profiled Processes:${pid}"
   else
     pid=$(find_pid "$1")
     if [ "${pid}" == "" ]; then
@@ -396,13 +442,32 @@ cmd_stabilize() {
 #
 HELP_start="Starts the profiler"
 cmd_start() {
-  stop_b2g
-  remove_profile_files
-  echo -n "Starting b2g with profiling enabled ..."
-  # Use nohup or we may accidentally kill the adb shell when this
-  # script exits.
-  nohup ${ADB} shell "MOZ_PROFILER_STARTUP=1 /system/bin/b2g.sh > /dev/null" > /dev/null 2>&1 &
-  echo " started"
+  if [ -n "$1" ]; then
+    B2G_PID=$(get_pid_by_pid_or_name "$1") || {
+      echo "Could not find pid: $1"
+      exit 1;
+    }
+    if ! is_profiler_running ${B2G_PID}; then
+      THREAD=$2
+      if [ -n "$THREAD" ]; then
+        adb shell "echo ${THREAD} > /data/local/tmp/profiler.options"
+      else
+        adb shell rm /data/local/tmp/profiler.options
+      fi
+      echo "Starting profiling PID $B2G_PID"
+      ${ADB} shell "kill -12 ${B2G_PID}"
+    else
+      echo "$B2G_PID is already being profiled"
+    fi
+  else
+    stop_b2g
+    remove_profile_files
+    echo -n "Starting b2g with profiling enabled ..."
+    # Use nohup or we may accidentally kill the adb shell when this
+    # script exits.
+    nohup ${ADB} shell "MOZ_PROFILER_STARTUP=1 /system/bin/b2g.sh > /dev/null" > /dev/null 2>&1 &
+    echo " started"
+  fi
 }
 
 ###########################################################################
@@ -445,6 +510,7 @@ cmd_symbolicate() {
   local sym_filename="${profile_filename%.*}.sym"
   echo "${PREFIX}Adding symbols to ${profile_filename} and creating ${sym_filename} ..."
   ./scripts/profile-symbolicate.py -o "${sym_filename}" "${profile_filename}" > /dev/null
+  CMD_SYMBOLICATE_PROFILE="$sym_filename"
 }
 
 ###########################################################################
