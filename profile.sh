@@ -117,7 +117,7 @@ is_profiler_running() {
   if [ -z "${pid}" ]; then
     return 1
   fi
-  local status="$(${ADB} shell cat /proc/${pid}/task/*/stat | tr '\0' '\n' | grep '(SamplerThread)')"
+  local status="$(${ADB} shell cat "/proc/${pid}/task/*/stat" | tr '\0' '\n' | grep '(SamplerThread)')"
   if [ -z "${status}" ]; then
     return 1
   fi
