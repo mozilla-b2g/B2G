@@ -35,6 +35,17 @@ To install mach from pypi, run:
     $ pip install mach
 '''.lstrip()
 
+LOAD_CONFIG_FAILED = '''
+An error occured when trying to source load-config.sh. Make sure there are
+no problems with your .userconfig file and try again. The following output was
+received:
+
+%s
+
+If you think this is an error in the mach driver itself, please file a bug under
+Boot2Gecko/Builds.
+'''.lstrip()
+
 # TODO Bug 794506 Integrate with the in-tree virtualenv configuration.
 SEARCH_PATHS = [
     'python/mach',
@@ -137,6 +148,21 @@ def bootstrap(b2g_home):
             sys.exit(1)
         state_dir = state_user_dir
 
+    # Load the configuration created by the build system.
+    # We need to call set -a because load-config doesn't
+    # export the variables it creates.
+    cmd = ['/usr/bin/env', 'bash', '-c',
+           'set -a && source %s > /dev/null && printenv'
+            % os.path.join(b2g_home, 'load-config.sh')]
+    try:
+        output = subprocess.check_output(cmd, stderr=subprocess.STDOUT, cwd=b2g_home)
+        for line in output.splitlines():
+            key, value = line.split('=', 1)
+            os.environ[key] = value
+    except subprocess.CalledProcessError, e:
+        print(LOAD_CONFIG_FAILED % e.output.strip())
+        sys.exit(1)
+
     # If a gecko source tree is detected, its mach modules are are also
     # loaded.
     gecko_dir = os.environ.get('GECKO_PATH', os.path.join(b2g_home, 'gecko'))
@@ -167,16 +193,6 @@ def bootstrap(b2g_home):
             print(MACH_NOT_FOUND)
             sys.exit(1)
 
-    # Load the configuration created by the build system.
-    # This is the equivalent of sourcing load-config.sh
-    config_paths = [os.path.join(b2g_home, '.config'),
-                    os.path.join(b2g_home, '.userconfig'),]
-    for config_path in config_paths:
-        if os.path.isfile(config_path):
-            with open(config_path, 'r') as fh:
-                for line in fh.readlines():
-                    key, value = line.split('=', 1)
-                    os.environ[key] = value
     # The build system doesn't provide a mechanism to use
     # a different mozconfig.
     os.environ['MOZCONFIG'] = os.path.join(b2g_home, 'gonk-misc',
