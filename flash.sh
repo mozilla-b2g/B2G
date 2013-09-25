@@ -211,6 +211,14 @@ flash_gaia()
 		# Gaia's build takes care of remounting /system for production builds
 		GAIA_MAKE_FLAGS+=" PRODUCTION=1"
 	fi
+	adb wait-for-device
+	if adb shell cat /data/local/webapps/webapps.json | grep -qs '"basePath": "/system' ; then
+		echo -n "In ${bold}production${offbold} mode"
+		export B2G_SYSTEM_APPS=1
+		adb remount
+	else
+		echo -n "In ${bold}dev${offbold} mode"
+	fi 
 	make -C gaia install-gaia $GAIA_MAKE_FLAGS
 	return 0
 }
