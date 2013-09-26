@@ -295,12 +295,15 @@ cmd_pull() {
   local profile_filename
   local profile_pattern="${PROFILE_DIR}/profile_?_${pid}.txt"
   local local_filename
+  # Remove all non-alphanumeric characters from the process name to
+  # make filename-handling sane.
+  local alphanum_process_name=${B2G_COMMS[${pid}]//[^A-Za-z0-9]/}
   if [ -z "${comm}" ]; then
     local_filename="profile_${pid}.txt"
   elif [ -z "${label}" ]; then
-    local_filename="profile_${pid}_${B2G_COMMS[${pid}]}.txt"
+    local_filename="profile_${pid}_${alphanum_process_name}.txt"
   else
-    local_filename="profile_${label}_${pid}_${B2G_COMMS[${pid}]}.txt"
+    local_filename="profile_${label}_${pid}_${alphanum_process_name}.txt"
   fi
   profile_filename=$(${ADB} shell "echo -n ${profile_pattern}")
   
