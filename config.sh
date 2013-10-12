@@ -112,7 +112,7 @@ case "$1" in
 	echo TARGET_HVGA_ENABLE=true >> .tmp-config &&
 	echo GONK_VERSION=SP7710_13A_W13.39.7 >> .tmp-config &&
 	repo_sync $1 &&
-	cd sprd_patch && ./patch.sh sp7710ga_gonk4.0 #patch some necessory code
+	./sprd_patch/patch.sh sp7710ga_gonk4.0 #patch some necessory code
 	;;
 
 "tara")
