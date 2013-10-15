@@ -129,6 +129,11 @@ case "$1" in
 	repo_sync $1
 	;;
 
+"flo")
+	echo DEVICE=flo >> .tmp-config &&
+	repo_sync $1
+	;;
+
 *)
 	echo "Usage: $0 [-cdflnq] (device name)"
 	echo "Flags are passed through to |./repo sync|."
@@ -139,6 +144,7 @@ case "$1" in
 	echo - nexus-4
 	echo - nexus-s
 	echo - nexus-s-4g
+	echo - flo "(Nexus 7 2013)"
 	echo - otoro
 	echo - unagi
 	echo - inari
