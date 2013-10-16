@@ -234,6 +234,7 @@ while [ $# -gt 0 ]; do
 		FULLFLASH=true
 		;;
 	*)
+		FULLFLASH=true
 		PROJECT=$1
 		;;
 	esac
