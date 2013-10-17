@@ -86,6 +86,11 @@ CATEGORIES = {
         'short': 'Potpourri',
         'long': 'Potent potables and assorted snacks.',
         'priority': 10,
+    },
+    'disabled': {
+        'short': 'Disabled',
+        'long': 'These commands are unavailable for your current context, run "mach <command>" to see why.',
+        'priority': 0,
     }
 }
 
@@ -163,7 +168,7 @@ def bootstrap(b2g_home):
         print(LOAD_CONFIG_FAILED % e.output.strip())
         sys.exit(1)
 
-    # If a gecko source tree is detected, its mach modules are are also
+    # If a gecko source tree is detected, its mach modules are also
     # loaded.
     gecko_dir = os.environ.get('GECKO_PATH', os.path.join(b2g_home, 'gecko'))
     gecko_bootstrap_dir = os.path.join(gecko_dir, 'build')
