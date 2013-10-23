@@ -7,6 +7,9 @@ PROFILE_DIR=/data/local/tmp
 PROFILE_PATTERN=${PROFILE_DIR}/'profile_?_*.txt';
 PREFIX=""
 
+FEATURES_FLAG="MOZ_PROFILING_FEATURES"
+DEFAULT_FEATURES=js,leaf
+
 # The get_pids function populates B2G_PIDS as an array containting the PIDs
 # of all of the b2g processes
 declare -a B2G_PIDS
@@ -122,6 +125,82 @@ is_profiler_running() {
     return 1
   fi
   return 0
+}
+
+###########################################################################
+#
+# Parses start arguments array and sets their features
+#
+start_with_args() {
+  fileName="/data/local/tmp/profiler.options"
+  B2G_PID=""
+  adb shell rm $fileName &> /dev/null
+  features=""
+  threads=""
+
+  while getopts ":i:m:t:f:p:e:s:" opt "$@";
+  do
+    case $opt in
+      e)
+        echo "Entries: $OPTARG"
+        ${ADB} shell "echo MOZ_PROFILER_ENTRIES=$OPTARG >> $fileName"
+        ;;
+      s)
+        echo "Stack Scan: $OPTARG"
+        ${ADB} shell "echo MOZ_PROFILER_STACK_SCAN=$OPTARG >> $fileName"
+        ;;
+      i)
+        echo "Interval: $OPTARG"
+        ${ADB} shell "echo MOZ_PROFILER_INTERVAL=$OPTARG >> $fileName"
+        ;;
+      m)
+        echo "Mode: $OPTARG"
+        ${ADB} shell "echo MOZ_PROFILER_MODE=$OPTARG >> $fileName"
+        ;;
+      t)
+        threads=$OPTARG
+        echo "Threads: $OPTARG"
+        ${ADB} shell "echo threads=$threads >> $fileName"
+        ;;
+      f)
+        features=$OPTARG
+        echo "Features: $features"
+        ${ADB} shell "echo $FEATURES_FLAG=$features>> $fileName"
+        ;;
+      p)
+        echo "Process: $OPTARG"
+        B2G_PID=$(get_pid_by_pid_or_name "$OPTARG") || {
+          echo "Could not find pid: $OPTARG"
+          exit 1
+        }
+        ;;
+      esac
+  done
+
+  # Feature / thread fix up. If we have a thread
+  # the feature "threads" must be enabled
+  if [ -z "$features" ]
+  then
+    if [ -n "$threads" ]
+    then
+      echo "Using default features js,leaf,threads"
+      ${ADB} shell "echo $FEATURES_FLAG=$DEFAULT_FEATURES,threads >> $fileName"
+    else
+      echo "Using default features $DEFAULT_FEATURES"
+      ${ADB} shell "echo $FEATURES_FLAG=$DEFAULT_FEATURES >> $fileName"
+    fi
+  fi
+
+  if [ -z "$B2G_PID" ]
+  then
+    echo "No B2G process specified. Exiting"
+    exit 1
+  else
+    echo "Starting profiling PID $B2G_PID.."
+    ${ADB} shell "kill -12 ${B2G_PID}"
+    echo "Profiler started"
+    echo
+  fi
 }
 
 ###########################################################################
@@ -443,33 +522,23 @@ cmd_stabilize() {
 #
 # Start b2g with the profiler enabled.
 #
-HELP_start="Starts the profiler"
+HELP_start="Starts the profiler. -p [process] -e [entries] -s [stack scan mode]
+              -i [interval] -m [profiler mode] -f [features] -t [threads].
+              e.g. ./profile.sh start -p b2g -t Compositor -i 1"
 cmd_start() {
-  if [ -n "$1" ]; then
-    B2G_PID=$(get_pid_by_pid_or_name "$1") || {
-      echo "Could not find pid: $1"
-      exit 1;
-    }
-    if ! is_profiler_running ${B2G_PID}; then
-      THREAD=$2
-      if [ -n "$THREAD" ]; then
-        adb shell "echo ${THREAD} > /data/local/tmp/profiler.options"
-      else
-        adb shell rm /data/local/tmp/profiler.options
-      fi
-      echo "Starting profiling PID $B2G_PID"
-      ${ADB} shell "kill -12 ${B2G_PID}"
-    else
-      echo "$B2G_PID is already being profiled"
-    fi
+  args=$@
+  if [ -n "$args" ]
+  then
+    start_with_args $args
   else
     stop_b2g
     remove_profile_files
-    echo -n "Starting b2g with profiling enabled ..."
-    # Use nohup or we may accidentally kill the adb shell when this
-    # script exits.
-    nohup ${ADB} shell "MOZ_PROFILER_STARTUP=1 /system/bin/b2g.sh > /dev/null" > /dev/null 2>&1 &
-    echo " started"
+    default_flags=" MOZ_PROFILER_STARTUP=1 $FEATURES_FLAG=$DEFAULT_FEATURES"
+
+    echo -n "Starting b2g with profiling enable and default flags: $default_flags"
+    echo
+    nohup ${ADB} shell "$default_flags /system/bin/b2g.sh > /dev/null" > /dev/null 2>&1 &
+    echo "Started"
   fi
 }
 
