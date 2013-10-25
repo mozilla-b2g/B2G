@@ -113,7 +113,6 @@ case "$1" in
 	echo GONK_VERSION=SP7710_13A_W13.39.7 >> .tmp-config &&
 	repo_sync $1
 	;;
-	# ./sprd_patch/patch.sh sp7710ga_gonk4.0 #patch the code on your need
 
 "tara")
 	echo DEVICE=sp8810ea >> .tmp-config &&
