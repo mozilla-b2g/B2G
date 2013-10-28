@@ -107,7 +107,7 @@ def _find_xulrunner_sdk(gaia_dir):
     sdk = sorted(xulrunner_sdks,
                  key=lambda x: int(x[len(x.rstrip('0123456789')):] or 0),
                  reverse=True)[0]
-    return os.path.join(gaia_dir, sdk)
+    return os.path.join(gaia_dir, sdk, 'xulrunner-sdk')
 
 def bootstrap(b2g_home):
     # Ensure we are running Python 2.7+. We put this check here so we generate a
