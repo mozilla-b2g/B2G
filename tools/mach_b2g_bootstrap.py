@@ -95,8 +95,18 @@ CATEGORIES = {
 }
 
 def _find_xulrunner_sdk(gaia_dir):
-    # TODO This should use the XULRUNNER_DIRECTORY variable in the gaia
-    # Makefile, but there is currently no easy way to extract it.
+    # Try to use the print-xulrunner-sdk target first, if it fails,
+    # then do some lucky guess
+    try:
+        cmd = ['make', '-s', '-C', gaia_dir, 'print-xulrunner-sdk']
+        sdk = subprocess.check_output(cmd).decode('utf-8').strip()
+        return os.path.join(gaia_dir, sdk)
+    except subprocess.CalledProcessError:
+        pass
+
+    # TODO: We still rely on this heuristic for gaia version that do not
+    # have the print-xulrunner-sdk target. Once no more branch are like this,
+    # this can be dropped.
     xulrunner_sdks = [d for d in os.listdir(gaia_dir)
                       if d.startswith('xulrunner-sdk')]
     if not xulrunner_sdks:
