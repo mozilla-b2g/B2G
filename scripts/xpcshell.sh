@@ -8,6 +8,7 @@ if [ -z $GECKO_PATH ]; then
   GECKO_PATH=$B2G_DIR/gecko
 fi
 
+VIRTUAL_ENV_VERSION="49f40128a9ca3824ebf253eca408596e135cf893"
 BUSYBOX=$B2G_DIR/gaia/build/busybox-armv6l
 TEST_PACKAGE_STAGE_DIR=$GECKO_OBJDIR/dist/test-package-stage
 TESTING_MODULES_DIR=$TEST_PACKAGE_STAGE_DIR/modules
@@ -28,6 +29,7 @@ elif [ "$DEVICE" = "generic_x86" ]; then
 fi
 
 XPCSHELL_MANIFEST=tests/xpcshell_b2g.ini
+
 while [ $# -gt 0 ]; do
   case "$1" in
     --manifest)
@@ -41,8 +43,28 @@ while [ $# -gt 0 ]; do
 done
 
 XPCSHELL_FLAGS+=" --manifest $XPCSHELL_MANIFEST"
-SCRIPT=$GECKO_PATH/testing/marionette/client/marionette/venv_mochitest.sh
+MARIONETTE_HOME=$GECKO_PATH/testing/marionette/client/
 PYTHON=`which python`
+
+VENV_DIR="marionette_venv"
+if [ -z $GECKO_OBJDIR ]
+then
+  VENV_DIR="$MARIONETTE_DIR/$VENV_DIR"
+else
+  VENV_DIR="$GECKO_OBJDIR/$VENV_DIR"
+fi
+
+if [ -d $VENV_DIR ]
+then
+  echo "Using virtual environment in $VENV_DIR"
+else
+  echo "Creating a virtual environment in $VENV_DIR"
+  curl https://raw.github.com/pypa/virtualenv/${VIRTUAL_ENV_VERSION}/virtualenv.py | ${PYTHON} - $VENV_DIR
+fi
+. $VENV_DIR/bin/activate
+
+cd $MARIONETTE_HOME
+python setup.py develop
 
 set -e
 if [ ! -d "$TEST_PACKAGE_STAGE_DIR" ]; then
@@ -51,6 +73,5 @@ if [ ! -d "$TEST_PACKAGE_STAGE_DIR" ]; then
 fi
 
 set -x
-GECKO_OBJDIR=$GECKO_OBJDIR \
-TEST_PWD=$TEST_PACKAGE_STAGE_DIR/xpcshell \
-  bash $SCRIPT "$PYTHON" $XPCSHELL_FLAGS $@
+cd $TEST_PACKAGE_STAGE_DIR/xpcshell
+$VENV_DIR/bin/python runtestsb2g.py $XPCSHELL_FLAGS $@
