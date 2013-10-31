@@ -106,6 +106,14 @@ case "$1" in
 	repo_sync $1
 	;;
 
+"fugu")
+	echo DEVICE=sp7710ga_gonk >> .tmp-config &&
+	echo LUNCH=sp7710ga_gonk-eng >> .tmp-config &&
+	echo TARGET_HVGA_ENABLE=true >> .tmp-config &&
+	echo GONK_VERSION=SP7710_13A_W13.39.7 >> .tmp-config &&
+	repo_sync $1
+	;;
+
 "tara")
 	echo DEVICE=sp8810ea >> .tmp-config &&
 	echo LUNCH=sp8810eabase-eng >> .tmp-config &&
@@ -154,6 +162,7 @@ case "$1" in
 	echo - hamachi
 	echo - helix
 	echo - wasabi
+	echo - fugu
 	echo - tara
 	echo - pandaboard
 	echo - emulator
