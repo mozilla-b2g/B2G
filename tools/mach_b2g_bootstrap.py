@@ -53,7 +53,7 @@ SEARCH_PATHS = [
 
 # Individual files providing mach commands.
 MACH_MODULES = [
-    'python/mach/mach/commands/commandinfo.py',
+    'tools/mach_commands.py',
 ]
 
 CATEGORIES = {
