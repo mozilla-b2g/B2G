@@ -171,9 +171,9 @@ def bootstrap(b2g_home):
             % os.path.join(b2g_home, 'load-config.sh')]
     try:
         output = subprocess.check_output(cmd, stderr=subprocess.STDOUT, cwd=b2g_home)
-        for line in output.splitlines():
+        for line in [l.decode('utf8') for l in output.splitlines()]:
             key, value = line.split('=', 1)
-            os.environ[key] = value
+            os.environ[key.encode('utf8')] = value.encode('utf8')
     except subprocess.CalledProcessError, e:
         print(LOAD_CONFIG_FAILED % e.output.strip())
         sys.exit(1)
