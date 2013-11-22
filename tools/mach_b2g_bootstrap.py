@@ -246,4 +246,7 @@ def bootstrap(b2g_home):
         if os.path.isfile(module):
             mach.load_commands_from_file(os.path.join(b2g_home, path))
 
+    if hasattr(mach, 'load_commands_from_entry_point'):
+        mach.load_commands_from_entry_point('mach.b2g.providers')
+
     return mach
