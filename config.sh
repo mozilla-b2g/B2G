@@ -37,9 +37,9 @@ while [ $# -ge 1 ]; do
 	case $1 in
 	-d|-l|-f|-n|-c|-q|-j*)
 		sync_flags="$sync_flags $1"
-		if [ $1 = "-j" ];then
+		if [ $1 = "-j" ]; then
 			shift
-			sync_flags+="$1"
+			sync_flags+=" $1"
 		fi
 		shift
 		;;
