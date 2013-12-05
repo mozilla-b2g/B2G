@@ -434,7 +434,7 @@ install_homebrew() {
         )
     fi
 
-    installer_url="https://raw.github.com/mxcl/homebrew/go"
+    installer_url="https://raw.github.com/mxcl/homebrew/go/install"
 
     run_command curl -fsSL $installer_url -o $tmp_installer
     run_command ruby $tmp_installer
