@@ -90,6 +90,11 @@ case "$1" in
 	repo_sync nexus-4
 	;;
 
+"nexus-5")
+  echo DEVICE=hammerhead >> .tmp-config &&
+  repo_sync nexus-5
+  ;;
+
 "optimus-l5")
 	echo DEVICE=m4 >> .tmp-config &&
 	repo_sync $1
