@@ -834,6 +834,24 @@ class FlashFotaBuilder(object):
             self.import_releasetools()
         self.generator = edify_generator.EdifyGenerator(1, {"fstab": self.fstab})
 
+    def AssertMountIfNeeded(self, mount_point):
+        """
+           AssertMount the partition with the given mount_point
+           if it is not already mounted.
+        """
+        fstab = self.generator.info.get("fstab", None)
+        if fstab:
+            p = fstab[mount_point]
+            self.generator.Print("Mounting " + mount_point)
+            self.generator.script.append(
+               'ifelse(is_mounted("%s"),' \
+               'ui_print("Already mounted."),' \
+               'assert(mount("%s", "%s", "%s", "%s")));' %
+                (p.mount_point,
+                 p.fs_type, common.PARTITION_TYPES[p.fs_type],
+                 p.device, p.mount_point))
+            self.generator.mounts.add(p.mount_point)
+
     def import_releasetools(self):
         releasetools_dir = os.path.join(b2g_dir, "build", "tools", "releasetools")
         sys.path.append(releasetools_dir)
@@ -842,6 +860,9 @@ class FlashFotaBuilder(object):
         sys.path.pop()
 
     def zip_filter(self, path, relpath):
+        if self.fota_type == 'partial':
+            if not relpath in self.fota_files:
+                return False
         Item.Get(relpath, dir=os.path.isdir(path))
         if not os.path.isdir(path) and os.path.islink(path):
             # This assumes that system always maps to /system, data to /data, etc
@@ -863,20 +884,51 @@ class FlashFotaBuilder(object):
         os.unlink(unsigned_zip)
 
     def build_flash_script(self):
-        for mount_point, partition in self.fstab.iteritems():
-            partition_type = common.PARTITION_TYPES[partition.fs_type]
-            self.generator.AppendExtra('format("%s", "%s", "%s", %d);' % \
-                (partition.fs_type, partition_type, partition.device,
-                 partition.fs_size))
+        self.generator.Print("Starting B2G FOTA: " + self.fota_type)
+
+        if not self.fota_type == 'partial':
+            for mount_point, partition in self.fstab.iteritems():
+                partition_type = common.PARTITION_TYPES[partition.fs_type]
+                self.generator.AppendExtra('format("%s", "%s", "%s", %d);' % \
+                    (partition.fs_type, partition_type, partition.device,
+                     partition.fs_size))
 
         for mount_point in self.fstab:
-            self.generator.Mount(mount_point)
+            self.AssertMountIfNeeded(mount_point)
 
+        if self.fota_type == 'partial':
+            for d in self.fota_dirs:
+                self.generator.Print("Cleaning " + d)
+                cmd = ('delete_recursive("%s");' % ("/"+d))
+                self.generator.script.append(self.generator._WordWrap(cmd))
+
+            cmd = ('if greater_than_int(run_program("/system/bin/mv", "/system/b2g.bak", "/system/b2g"), 0) then')
+            self.generator.script.append(self.generator._WordWrap(cmd))
+            self.generator.Print("No previous stale update.")
+
+        self.generator.Print("Remove stale libdmd.so")
+        self.generator.DeleteFiles(["/system/b2g/libdmd.so"])
+
+        self.generator.Print("Remove stale update")
+        cmd = ('delete_recursive("/system/b2g/updated");')
+        self.generator.script.append(self.generator._WordWrap(cmd))
+
+        self.generator.Print("Extracting files to /system")
         self.generator.UnpackPackageDir("system", "/system")
 
+        self.generator.Print("Creating symlinks")
         self.generator.MakeSymlinks(self.symlinks)
+
+        self.generator.Print("Setting file permissions")
         self.build_permissions()
+
+        if self.fota_type == 'partial':
+            cmd = ('else ui_print("Restoring previous stale update."); endif;')
+            self.generator.script.append(self.generator._WordWrap(cmd))
+
+        self.generator.Print("Unmounting ...")
         self.generator.UnmountAll()
+
         return "\n".join(self.generator.script) + "\n"
 
     def build_permissions(self):
@@ -889,12 +941,16 @@ class FlashFotaBuilder(object):
         fs_config = Tool(os.path.join(host_bin_dir, "fs_config"))
         suffix = { False: "", True: "/" }
         paths = "\n".join([i.name + suffix[i.dir]
-                           for i in Item.ITEMS.itervalues() if i.name])
+                           for i in Item.ITEMS.itervalues() if i.name]) + '\n'
         self.fs_config_data = fs_config.run(input=paths)
 
         # see build/tools/releasetools/ota_from_target_files
         Item.GetMetadata(self)
-        Item.Get("system").SetPermissions(self.generator)
+        if not self.fota_type == 'partial':
+            Item.Get("system").SetPermissions(self.generator)
+        else:
+            for d in self.fota_dirs:
+                Item.Get(d).SetPermissions(self.generator)
 
     "Emulate zipfile.read so we can reuse Item.GetMetadata"
     def read(self, path):

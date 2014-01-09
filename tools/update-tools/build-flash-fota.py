@@ -36,6 +36,14 @@ def build_flash_fota(args):
     data = update_tools.Partition.create_data(args.data_fs_type,
                                               args.data_location)
     builder = update_tools.FlashFotaBuilder(system, data)
+
+    builder.fota_type = args.fota_type
+    builder.fota_dirs = []
+    builder.fota_files = []
+    if args.fota_type == 'partial':
+	builder.fota_dirs = args.fota_dirs.split(' ')
+        builder.fota_files = [line.rstrip() for line in open(args.fota_files, 'r')]
+
     builder.build_flash_fota(args.system_dir, public_key, private_key,
                              output_zip)
     print "FOTA Flash ZIP generated: %s" % output_zip
@@ -57,6 +65,17 @@ def main():
         default=None, required=True, help="filesystem type for /data. required")
     data_group.add_argument("--data-location", dest="data_location",
         default=None, required=True, help="device location for /data. required")
+
+    fota_group = parser.add_argument_group("fota options")
+    fota_group.add_argument("--fota-type", dest="fota_type",
+        required=False, default="full",
+        help="'partial' or 'full' fota. 'partial' requires a file list")
+    fota_group.add_argument("--fota-dirs", dest="fota_dirs",
+        required=False, default="",
+        help="space-separated string containing list of dirs to include, to delete files")
+    fota_group.add_argument("--fota-files", dest="fota_files",
+        required=False, default="",
+        help="file containing list of files in /system to include")
 
     signing_group = parser.add_argument_group("signing options")
     signing_group.add_argument("-d", "--dev-key", dest="dev_key",
