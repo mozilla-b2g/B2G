@@ -166,7 +166,8 @@ def notify_and_pull_files(outfiles_prefixes,
                           out_dir,
                           optional_outfiles_prefixes=[],
                           fifo_msg=None,
-                          signal=None):
+                          signal=None,
+                          ignore_nuwa=os.getenv("MOZ_IGNORE_NUWA_PROCESS")):
     '''Send a message to the main B2G process (either by sending it a signal or
     by writing to a fifo that it monitors) and pull files created as a result.
 
@@ -214,7 +215,10 @@ def notify_and_pull_files(outfiles_prefixes,
 
     all_outfiles_prefixes = outfiles_prefixes + optional_outfiles_prefixes
 
-    num_expected_files = len(outfiles_prefixes) * (1 + len(child_pids))
+    num_expected_responses = 1 + len(child_pids)
+    if ignore_nuwa:
+        num_expected_responses -= 1
+    num_expected_files = len(outfiles_prefixes) * num_expected_responses
     _wait_for_remote_files(outfiles_prefixes, num_expected_files, old_files)
     new_files = _pull_remote_files(all_outfiles_prefixes, old_files, out_dir)
     if remove_outfiles_from_device:
