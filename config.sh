@@ -110,7 +110,7 @@ case "$1" in
 	repo_sync $1
 	;;
 
-"otoro"|"unagi"|"keon"|"inari"|"leo"|"hamachi"|"peak"|"helix"|"wasabi")
+"otoro"|"unagi"|"keon"|"inari"|"leo"|"hamachi"|"peak"|"helix"|"wasabi"|"flatfish")
 	echo DEVICE=$1 >> .tmp-config &&
 	repo_sync $1
 	;;
@@ -174,6 +174,7 @@ case "$1" in
 	echo - fugu
 	echo - tara
 	echo - pandaboard
+	echo - flatfish
 	echo - emulator
 	echo - emulator-jb
 	echo - emulator-x86
