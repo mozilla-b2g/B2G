@@ -4,11 +4,6 @@
 B2G_DIR=$(cd `dirname $0`/..; pwd)
 . $B2G_DIR/setup.sh
 
-# Use default Gecko location if it's not provided in .config.
-if [ -z $GECKO_PATH ]; then
-  GECKO_PATH=$B2G_DIR/gecko
-fi
-
 # Run standard set of tests by default. Command line arguments can be
 # specified to run specific tests (an individual test file, a directory,
 # or an .ini file).
