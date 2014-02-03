@@ -3,11 +3,6 @@
 B2G_DIR=$(cd `dirname $0`/..; pwd)
 . $B2G_DIR/load-config.sh
 
-# Use default Gecko location if it's not provided in .config.
-if [ -z $GECKO_PATH ]; then
-  GECKO_PATH=$B2G_DIR/gecko
-fi
-
 VIRTUAL_ENV_VERSION="49f40128a9ca3824ebf253eca408596e135cf893"
 BUSYBOX=$B2G_DIR/gaia/build/busybox-armv6l
 TEST_PACKAGE_STAGE_DIR=$GECKO_OBJDIR/dist/test-package-stage
