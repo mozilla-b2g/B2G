@@ -123,6 +123,12 @@ case "$1" in
 	repo_sync $1
 	;;
 
+"tarako")
+	echo DEVICE=tarako >> .tmp-config &&
+	echo LUNCH=sp6821a_gonk-userdebug >> .tmp-config &&
+	repo_sync $1
+	;;
+
 "tara")
 	echo DEVICE=sp8810ea >> .tmp-config &&
 	echo LUNCH=sp8810eabase-eng >> .tmp-config &&
@@ -172,6 +178,7 @@ case "$1" in
 	echo - helix
 	echo - wasabi
 	echo - fugu
+	echo - tarako
 	echo - tara
 	echo - pandaboard
 	echo - emulator
