@@ -165,6 +165,7 @@ case "$1" in
 	echo - galaxy-s2
 	echo - galaxy-nexus
 	echo - nexus-4
+	echo - nexus-5
 	echo - nexus-s
 	echo - nexus-s-4g
 	echo - flo "(Nexus 7 2013)"
