@@ -205,31 +205,40 @@ def notify_and_pull_files(outfiles_prefixes,
         raise ValueError("Exactly one of the fifo_msg and "
                          "signal kw args must be non-null.")
 
+    unified_outfiles_prefixes = ['unified-' + pfx for pfx in outfiles_prefixes]
+    all_outfiles_prefixes = outfiles_prefixes + optional_outfiles_prefixes \
+                            + unified_outfiles_prefixes
+
     (master_pid, child_pids) = get_remote_b2g_pids()
     child_pids = set(child_pids)
-    old_files = _list_remote_temp_files(outfiles_prefixes)
+    old_files = _list_remote_temp_files(outfiles_prefixes + unified_outfiles_prefixes)
 
     if signal != None:
         _send_remote_signal(signal, master_pid)
     else:
         _write_to_remote_file('/data/local/debug_info_trigger', fifo_msg)
 
-    all_outfiles_prefixes = outfiles_prefixes + optional_outfiles_prefixes
-
     num_expected_responses = 1 + len(child_pids)
     if ignore_nuwa:
         num_expected_responses -= 1
     num_expected_files = len(outfiles_prefixes) * num_expected_responses
+    num_unified_expected = len(unified_outfiles_prefixes)
 
     max_wait = 60 * 2
     wait_interval = 1.0
     for i in range(0, int(max_wait / wait_interval)):
         new_files = _list_remote_temp_files(outfiles_prefixes) - old_files
-        sys.stdout.write('\rGot %d/%d files.' %
-                         (len(new_files), num_expected_files))
+        new_unified_files = _list_remote_temp_files(unified_outfiles_prefixes) - old_files
+        if new_unified_files:
+            files_gotten = len(new_unified_files)
+            files_expected = num_unified_expected
+        else:
+            files_gotten = len(new_files)
+            files_expected = num_expected_files
+        sys.stdout.write('\rGot %d/%d files.' % (files_gotten, files_expected))
         sys.stdout.flush()
 
-        if len(new_files) == num_expected_files:
+        if files_gotten == files_expected:
             print('')
             break
 
@@ -245,12 +254,12 @@ def notify_and_pull_files(outfiles_prefixes,
             child_pids -= dead_child_pids
             num_expected_files -= len(outfiles_prefixes) * len(dead_child_pids)
 
-    if len(new_files) < num_expected_files:
+    if files_gotten < files_expected:
         print('')
         print("We've waited %ds but the only relevant files we see are" % max_wait)
-        print('\n'.join(['  ' + f for f in new_files]))
+        print('\n'.join(['  ' + f for f in new_files + new_unified_files]))
         print('We expected %d but see only %d files.  Giving up...' %
-              (num_expected_files, len(new_files)))
+              (files_expected, files_gotten))
         raise Exception("Unable to pull some files.")
 
     new_files = _pull_remote_files(all_outfiles_prefixes, old_files, out_dir)

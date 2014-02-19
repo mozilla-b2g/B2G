@@ -163,7 +163,9 @@ def get_dumps(args):
             out_dir=out_dir,
             optional_outfiles_prefixes=['dmd-'])
 
-        memory_report_files = [f for f in new_files if f.startswith('memory-report-')]
+        memory_report_files = [f for f in new_files
+                               if f.startswith('memory-report-') or
+                                  f.startswith('unified-memory-report-')]
         dmd_files = [f for f in new_files if f.startswith('dmd-')]
         merged_reports_path = merge_files(out_dir, memory_report_files)
         utils.pull_procrank_etc(out_dir)
