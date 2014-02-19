@@ -90,6 +90,11 @@ case "$1" in
 	repo_sync nexus-4
 	;;
 
+"nexus-4-kk")
+	echo DEVICE=mako >> .tmp-config &&
+	repo_sync nexus-4-kk
+	;;
+
 "nexus-5")
   echo DEVICE=hammerhead >> .tmp-config &&
   repo_sync nexus-5
@@ -165,6 +170,7 @@ case "$1" in
 	echo - galaxy-s2
 	echo - galaxy-nexus
 	echo - nexus-4
+	echo - nexus-4-kk
 	echo - nexus-5
 	echo - nexus-s
 	echo - nexus-s-4g
