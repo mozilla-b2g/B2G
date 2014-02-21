@@ -48,8 +48,12 @@ update_time()
 fastboot_flash_image()
 {
 	# $1 = {userdata,boot,system}
+	PARTITION=$1
+	if [ "$DEVICE" == "flatfish" ] && [ "$PARTITION" == "userdata" ]; then
+		PARTITION="data"
+	fi
 	imgpath="out/target/product/$DEVICE/$1.img"
-	out="$(run_fastboot flash "$1" "$imgpath" 2>&1)"
+	out="$(run_fastboot flash "$PARTITION" "$imgpath" 2>&1)"
 	rv="$?"
 	echo "$out"
 
@@ -89,6 +93,9 @@ flash_fastboot()
 	"helix")
 		run_adb reboot oem-1
 		;;
+	"flatfish")
+		run_adb reboot boot-fastboot
+		;;
 	*)
 		run_adb reboot bootloader
 		;;
@@ -118,9 +125,13 @@ flash_fastboot()
 		[ "$DEVICE" == "flo" ]; then
 			VERB="format"
 		fi
+		DATA_PART_NAME="userdata"
+		if [ "$DEVICE" == "flatfish" ]; then
+			DATA_PART_NAME="data"
+		fi
 		if [ "$DEVICE" != "helix" ]; then
 			run_fastboot $VERB cache &&
-			run_fastboot $VERB userdata
+			run_fastboot $VERB $DATA_PART_NAME
 			if [ $? -ne 0 ]; then
 				return $?
 			fi
@@ -322,7 +333,7 @@ case "$DEVICE" in
 	exit $?
 	;;
 
-"otoro"|"unagi"|"keon"|"peak"|"inari"|"sp8810ea"|"wasabi")
+"otoro"|"unagi"|"keon"|"peak"|"inari"|"sp8810ea"|"wasabi"|"flatfish")
 	flash_fastboot nounlock $PROJECT
 	;;
 
