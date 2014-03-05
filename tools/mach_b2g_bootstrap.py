@@ -32,8 +32,13 @@ index.
 
 To install mach from pypi, run:
 
-    $ sudo apt-get install python-pip
+    $ wget https://raw.github.com/pypa/pip/master/contrib/get-pip.py -O - | python
     $ pip install mach
+'''.lstrip()
+
+MACH_DUPLICATES = '''
+Warning: two copies of mach were detected. Using the copy in '%s'. To remove
+the obsolete copy in '%s', run `pip uninstall mach`.
 '''.lstrip()
 
 LOAD_CONFIG_FAILED = '''
@@ -48,9 +53,7 @@ Boot2Gecko/Builds.
 '''.lstrip()
 
 # TODO Bug 794506 Integrate with the in-tree virtualenv configuration.
-SEARCH_PATHS = [
-    'python/mach',
-]
+SEARCH_PATHS = []
 
 # Individual files providing mach commands.
 MACH_MODULES = [
@@ -164,24 +167,27 @@ def bootstrap(b2g_home):
             sys.exit(1)
         state_dir = state_user_dir
 
-    # Load the configuration created by the build system.
-    # We need to call set -a because load-config doesn't
-    # export the variables it creates.
-    f = tempfile.NamedTemporaryFile()
-    cmd = ['/usr/bin/env', 'bash', '-c',
-           'set -a && source %s > %s && printenv'
-            % (os.path.join(b2g_home, 'load-config.sh'), f.name)]
-    try:
-        output = subprocess.check_output(cmd, stderr=subprocess.STDOUT, cwd=b2g_home)
-        for line in [l.decode('utf8') for l in output.splitlines()]:
-            key, value = line.split('=', 1)
-            os.environ[key.encode('utf8')] = value.encode('utf8')
-    except subprocess.CalledProcessError, e:
-        print(LOAD_CONFIG_FAILED % e.output.strip())
-        sys.exit(1)
+    if os.path.isfile(os.path.join(b2g_home, '.config')):
+        # Load the configuration created by the build system.
+        # We need to call set -a because load-config doesn't
+        # export the variables it creates.
+        f = tempfile.NamedTemporaryFile()
+        cmd = ['/usr/bin/env', 'bash', '-c',
+               'set -a && source %s > %s && printenv'
+                % (os.path.join(b2g_home, 'load-config.sh'), f.name)]
+        try:
+            output = subprocess.check_output(cmd, stderr=subprocess.STDOUT, cwd=b2g_home)
+            for line in [l.decode('utf8') for l in output.splitlines()]:
+                key, value = line.split('=', 1)
+                os.environ[key.encode('utf8')] = value.encode('utf8')
+        except subprocess.CalledProcessError, e:
+            print(LOAD_CONFIG_FAILED % e.output.strip())
+            sys.exit(1)
 
-    print(f.read())
-    f.close()
+        output = f.read()
+        if output:
+            print(output)
+        f.close()
 
     # If a gecko source tree is detected, its mach modules are also
     # loaded.
@@ -203,15 +209,22 @@ def bootstrap(b2g_home):
         MACH_MODULES += [os.path.join(relpath, p)
                             for p in mach_bootstrap.MACH_MODULES]
 
+    mach_package = None
     try:
+        mach_package = imp.find_module('mach')[1]
+    except:
+        pass
+
+    try:
+        sys.path[0:0] = [os.path.join(b2g_home, path) for path in SEARCH_PATHS]
         import mach.main
     except ImportError:
-        sys.path[0:0] = [os.path.join(b2g_home, path) for path in SEARCH_PATHS]
-        try:
-            import mach.main
-        except ImportError:
-            print(MACH_NOT_FOUND)
-            sys.exit(1)
+        print(MACH_NOT_FOUND)
+        sys.exit(1)
+
+    mach_gecko = os.path.join(gecko_dir, 'python', 'mach')
+    if mach_package and os.path.isdir(mach_gecko):
+        print(MACH_DUPLICATES % (mach_gecko, mach_package))
 
     # The build system doesn't provide a mechanism to use
     # a different mozconfig.
