@@ -8,7 +8,12 @@ get_pid_by_name() {
 SCRIPT_NAME=$(basename $0)
 . load-config.sh
 
-ADB=adb
+ADB=${ADB:-adb}
+if [ ! -f "`which \"$ADB\"`" ]; then
+	ADB=out/host/`uname -s | tr "[[:upper:]]" "[[:lower:]]"`-x86/bin/adb
+fi
+echo "ADB Location: " $ADB
+
 if [ -z "${GDB}" ]; then
    if [ -d prebuilt ]; then
       GDB=prebuilt/$(uname -s | tr "[[:upper:]]" "[[:lower:]]")-x86/toolchain/arm-linux-androideabi-4.4.x/bin/arm-linux-androideabi-gdb
@@ -29,7 +34,9 @@ SYMDIR=$GONK_OBJDIR/symbols
 GDBSERVER_PID=$(get_pid_by_name gdbserver)
 
 GDB_PORT=$((10000 + $(id -u) % 50000))
-if [ "$1" = "attach"  -a  -n "$2" ] ; then
+if [ "$1" = "vgdb"  -a  -n "$2" ] ; then
+   GDB_PORT="$2"
+elif [ "$1" = "attach"  -a  -n "$2" ] ; then
    B2G_PID=$2
    if [ -z "$($ADB ls /proc/$B2G_PID)" ] ; then
       ATTACH_TARGET=$B2G_PID
@@ -64,7 +71,7 @@ if [ "$1" = "attach" ]; then
    fi
 
    $ADB shell gdbserver :$GDB_PORT --attach $B2G_PID &
-else
+elif [ "$1" != "vgdb" ]; then
    if [ -n "$1" ]; then
       B2G_BIN=$1
       shift
@@ -92,7 +99,11 @@ sleep 1
 echo "set solib-absolute-prefix $SYMDIR" > $GDBINIT
 echo "handle SIGPIPE nostop" >> $GDBINIT
 echo "set solib-search-path $GECKO_OBJDIR/dist/bin:$SYMDIR/system/lib:$SYMDIR/system/lib/hw:$SYMDIR/system/lib/egl:$SYMDIR/system/bin:$GONK_OBJDIR/system/lib:$GONK_OBJDIR/system/lib/egl:$GONK_OBJDIR/system/lib/hw:$GONK_OBJDIR/system/vendor/lib:$GONK_OBJDIR/system/vendor/lib/hw:$GONK_OBJDIR/system/vendor/lib/egl" >> $GDBINIT
-echo "target extended-remote :$GDB_PORT" >> $GDBINIT
+if [ "$1" == "vgdb" ] ; then
+  echo "target remote :$GDB_PORT" >> $GDBINIT
+else
+  echo "target extended-remote :$GDB_PORT" >> $GDBINIT
+fi
 
 PROG=$GECKO_OBJDIR/dist/bin/$(basename $B2G_BIN)
 [ -f $PROG ] || PROG=${SYMDIR}${B2G_BIN}
