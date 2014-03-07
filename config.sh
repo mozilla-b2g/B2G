@@ -145,6 +145,12 @@ case "$1" in
 	repo_sync $1
 	;;
 
+"dolphin")
+	echo DEVICE=scx15_sp7715ga >> .tmp-config &&
+	echo PRODUCT_NAME=scx15_sp7715gaplus >> .tmp-config &&
+	repo_sync $1
+	;;
+
 "pandaboard")
 	echo DEVICE=panda >> .tmp-config &&
 	repo_sync $1
@@ -192,6 +198,7 @@ case "$1" in
 	echo - fugu
 	echo - tarako
 	echo - tara
+	echo - dolphin
 	echo - pandaboard
 	echo - flatfish
 	echo - flame

@@ -129,7 +129,7 @@ flash_fastboot()
 		if [ "$DEVICE" == "flatfish" ]; then
 			DATA_PART_NAME="data"
 		fi
-		if [ "$DEVICE" != "helix" ]; then
+		if [ "$DEVICE" != "helix" -a "$DEVICE_NAME" != "dolphin" ]; then
 			run_fastboot $VERB cache &&
 			run_fastboot $VERB $DATA_PART_NAME
 			if [ $? -ne 0 ]; then
@@ -333,7 +333,7 @@ case "$DEVICE" in
 	exit $?
 	;;
 
-"flame"|"otoro"|"unagi"|"keon"|"peak"|"inari"|"sp8810ea"|"wasabi"|"flatfish")
+"flame"|"otoro"|"unagi"|"keon"|"peak"|"inari"|"sp8810ea"|"wasabi"|"flatfish"|"scx15_sp7715ga")
 	flash_fastboot nounlock $PROJECT
 	;;
 
