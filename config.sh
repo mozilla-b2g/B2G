@@ -120,6 +120,11 @@ case "$1" in
 	repo_sync $1
 	;;
 
+"flame")
+	echo PRODUCT_NAME=$1 >> .tmp-config &&
+	repo_sync $1
+	;;
+
 "fugu")
 	echo DEVICE=fugu >> .tmp-config &&
 	echo LUNCH=fugu-eng >> .tmp-config &&
@@ -189,6 +194,7 @@ case "$1" in
 	echo - tara
 	echo - pandaboard
 	echo - flatfish
+	echo - flame
 	echo - emulator
 	echo - emulator-jb
 	echo - emulator-kk
