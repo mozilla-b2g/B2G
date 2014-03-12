@@ -13,7 +13,7 @@ This script attempts to bootstrap a "minimal" OS X installation
 with the tools necessary to build Boot2Gecko.
 
 The only requirement for running this script should be XCode 4.x / 3.x,
-and either OS X 10.6 (Snow Leopard), 10.7 (Lion), or 10.8 (Mountain Lion).
+and either OS X 10.6+ (Snow Leopard).
 
 Usage: $0 [options]
 Options:
@@ -215,10 +215,10 @@ bootstrap_mac() {
 }
 
 install_xcode() {
-  if [[ $osx_version == "10.7" || $osx_version == "10.8" ]]; then
-      # In Lion, we open the Mac App Store for Xcode
+  if [ $osx_version \> "10.6" ]; then
+      # In OS X 10.7+, we open the Mac App Store for Xcode
       # Opening the App Store is annoying, so ignore option_auto_install here
-      echo "You will need to install Xcode 4.3 or newer to build Boot to Gecko on Mac OS X 10.7."
+      echo "You will need to install Xcode 4.3 or newer to build Boot to Gecko on your version of OS X."
       prompt_question "Do you want to open Xcode in the Mac App Store? [Y/n] " Y
       if [[ $answer = Y ]]; then
           # Xcode iTunes http URL: http://itunes.apple.com/us/app/xcode/id497799835?mt=12
@@ -318,6 +318,7 @@ check_xcode() {
       osx_106_sdk=$xcode_dev_path/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.6.sdk
       osx_107_sdk=$xcode_dev_path/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.7.sdk
       osx_108_sdk=$xcode_dev_path/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.8.sdk
+      osx_109_sdk=$xcode_dev_path/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.9.sdk
     fi
         
     test -d $osx_106_sdk
@@ -345,6 +346,8 @@ check_xcode() {
       osx_sdk=$osx_107_sdk
     elif [ -d "$osx_108_sdk" ]; then
       osx_sdk=$osx_108_sdk
+    elif [ -d "$osx_109_sdk" ]; then
+      osx_sdk=$osx_109_sdk
     fi
     
     # Peel the OS X SDK version out of the path so we don't have to mess with it
