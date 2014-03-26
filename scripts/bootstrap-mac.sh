@@ -149,22 +149,43 @@ bootstrap_mac() {
         echo "Found autoconf-2.13: $autoconf213"
     fi
 
-    found_apple_gcc=0
-    check_apple_gcc
+    # We don't need additional toolchain since Mavericks (10.9)
+    if [[ $osx_version != "10.9" ]]; then
+        found_apple_gcc=0
+        check_apple_gcc
 
-    if [ $found_apple_gcc -eq 0 ]; then
-        # No Apple gcc, probably because newer Xcode 4.3 only installed LLVM-backed gcc
-        # Fall back to checking for / installing gcc-4.6 
+        if [ $found_apple_gcc -eq 0 ]; then
+            # No Apple gcc, probably because newer Xcode 4.3 only installed LLVM-backed gcc
+            # Fall back to checking for / installing gcc-4.6
 
-        found_gcc46=1
-        gcc46=`which gcc-4.6`
-        if [ $? -ne 0 ]; then
-            found_gcc46=0
-            gcc46_formula="https://raw.github.com/mozilla-b2g/B2G/master/scripts/homebrew/gcc-4.6.rb"
-            homebrew_formulas+=" gcc-4.6:$gcc46_formula"
-        else
-            echo "Found gcc-4.6: $gcc46"
+            found_gcc46=1
+            gcc46=`which gcc-4.6`
+            if [ $? -ne 0 ]; then
+                found_gcc46=0
+                gcc46_formula="https://raw.github.com/mozilla-b2g/B2G/master/scripts/homebrew/gcc-4.6.rb"
+                homebrew_formulas+=" gcc-4.6:$gcc46_formula"
+            else
+                echo "Found gcc-4.6: $gcc46"
+            fi
         fi
+    fi
+
+    gnutar=
+    for prog in gnutar gtar tar; do
+        _gnutar=`which $prog`
+        if [ $? -eq 0 ]; then
+            $_gnutar -c --owner=0 --group=0 --numeric-owner --mode=go-w -f - $this_dir > /dev/null 2>&1
+            if [ $? -eq 0 ]; then
+                gnutar=$_gnutar
+                break
+            fi
+        fi
+    done
+
+    if [ ! -z "$gnutar" ]; then
+        echo ""Found GNU tar: $gnutar
+    else
+        homebrew_formulas+=" gnu-tar:gnu-tar"
     fi
 
     if [ ! -z "$homebrew_formulas" ]; then
@@ -320,20 +341,22 @@ check_xcode() {
       osx_108_sdk=$xcode_dev_path/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.8.sdk
       osx_109_sdk=$xcode_dev_path/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.9.sdk
     fi
-        
-    test -d $osx_106_sdk
-    if [ $? -ne 0 ] ; then
-        if [ "$option_auto_install" = "no" ]; then
-            echo "You don't have the 10.6 SDK.  This means that you're going to"
-            echo "see lots of error messages and possibly have build issues."
-            prompt_question "Do you want to install it? [Y/n] " Y
-        else
-            echo "Automatically install 10.6 SDK"
-            answer=Y
-        fi
-        if [[ $answer == Y ]] ; then
-            install_ten_six_sdk
-            exit 1
+
+    if [[ $osx_version != "10.9" ]]; then
+        test -d $osx_106_sdk
+        if [ $? -ne 0 ] ; then
+            if [ "$option_auto_install" = "no" ]; then
+                echo "You don't have the 10.6 SDK.  This means that you're going to"
+                echo "see lots of error messages and possibly have build issues."
+                prompt_question "Do you want to install it? [Y/n] " Y
+            else
+                echo "Automatically install 10.6 SDK"
+                answer=Y
+            fi
+            if [[ $answer == Y ]] ; then
+                install_ten_six_sdk
+                exit 1
+            fi
         fi
     fi
 
