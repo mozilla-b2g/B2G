@@ -232,7 +232,7 @@ def get_and_show_info(args):
 
     process_dmd_files(dmd_files, args)
 
-if __name__ == '__main__':
+def main():
     parser = argparse.ArgumentParser(description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter)
 
@@ -289,3 +289,6 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
     get_and_show_info(args)
+
+if __name__ == '__main__':
+    main()
