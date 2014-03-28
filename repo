@@ -20,7 +20,7 @@ REPO_REV = 'stable'
 # limitations under the License.
 
 # increment this whenever we make important changes to this script
-VERSION = (1, 20)
+VERSION = (1, 21)
 
 # increment this if the MAINTAINER_KEYS block is modified
 KEYRING_VERSION = (1, 2)
@@ -110,6 +110,7 @@ REPO_MAIN = S_repo + '/main.py' # main script
 MIN_PYTHON_VERSION = (2, 6)     # minimum supported python version
 
 
+import errno
 import optparse
 import os
 import re
@@ -138,10 +139,9 @@ def _print(*objects, **kwargs):
 # Python version check
 ver = sys.version_info
 if ver[0] == 3:
-  _print('error: Python 3 support is not fully implemented in repo yet.\n'
+  _print('warning: Python 3 support is currently experimental. YMMV.\n'
          'Please use Python 2.6 - 2.7 instead.',
          file=sys.stderr)
-  sys.exit(1)
 if (ver[0], ver[1]) < MIN_PYTHON_VERSION:
   _print('error: Python version %s unsupported.\n'
          'Please use Python 2.6 - 2.7 instead.'
@@ -181,6 +181,10 @@ group.add_option('--reference',
 group.add_option('--depth', type='int', default=None,
                  dest='depth',
                  help='create a shallow clone with given depth; see git clone')
+group.add_option('--archive',
+                 dest='archive', action='store_true',
+                 help='checkout an archive instead of a git repository for '
+                      'each project. See git archive.')
 group.add_option('-g', '--groups',
                  dest='groups', default='default',
                  help='restrict manifest projects to ones with specified '
@@ -240,10 +244,10 @@ def _Init(args):
     _print("fatal: invalid branch name '%s'" % branch, file=sys.stderr)
     raise CloneFailure()
 
-  if not os.path.isdir(repodir):
-    try:
-      os.mkdir(repodir)
-    except OSError as e:
+  try:
+    os.mkdir(repodir)
+  except OSError as e:
+    if e.errno != errno.EEXIST:
       _print('fatal: cannot make %s directory: %s'
              % (repodir, e.strerror), file=sys.stderr)
       # Don't raise CloneFailure; that would delete the
@@ -274,6 +278,20 @@ def _Init(args):
     raise
 
 
+def ParseGitVersion(ver_str):
+  if not ver_str.startswith('git version '):
+    return None
+
+  num_ver_str = ver_str[len('git version '):].strip().split('-')[0]
+  to_tuple = []
+  for num_str in num_ver_str.split('.')[:3]:
+    if num_str.isdigit():
+      to_tuple.append(int(num_str))
+    else:
+      to_tuple.append(0)
+  return tuple(to_tuple)
+
+
 def _CheckGitVersion():
   cmd = [GIT, '--version']
   try:
@@ -291,12 +309,11 @@ def _CheckGitVersion():
   proc.stdout.close()
   proc.wait()
 
-  if not ver_str.startswith('git version '):
+  ver_act = ParseGitVersion(ver_str)
+  if ver_act is None:
     _print('error: "%s" unsupported' % ver_str, file=sys.stderr)
     raise CloneFailure()
 
-  ver_str = ver_str[len('git version '):].strip()
-  ver_act = tuple(map(int, ver_str.split('.')[0:3]))
   if ver_act < MIN_GIT_VERSION:
     need = '.'.join(map(str, MIN_GIT_VERSION))
     _print('fatal: git %s or later required' % need, file=sys.stderr)
@@ -322,18 +339,18 @@ def NeedSetupGnuPG():
 
 
 def SetupGnuPG(quiet):
-  if not os.path.isdir(home_dot_repo):
-    try:
-      os.mkdir(home_dot_repo)
-    except OSError as e:
+  try:
+    os.mkdir(home_dot_repo)
+  except OSError as e:
+    if e.errno != errno.EEXIST:
       _print('fatal: cannot make %s directory: %s'
              % (home_dot_repo, e.strerror), file=sys.stderr)
       sys.exit(1)
 
-  if not os.path.isdir(gpg_dir):
-    try:
-      os.mkdir(gpg_dir, stat.S_IRWXU)
-    except OSError as e:
+  try:
+    os.mkdir(gpg_dir, stat.S_IRWXU)
+  except OSError as e:
+    if e.errno != errno.EEXIST:
       _print('fatal: cannot make %s directory: %s' % (gpg_dir, e.strerror),
              file=sys.stderr)
       sys.exit(1)
@@ -739,7 +756,7 @@ def main(orig_args):
     repo_main = my_main
 
   ver_str = '.'.join(map(str, VERSION))
-  me = [repo_main,
+  me = [sys.executable, repo_main,
         '--repo-dir=%s' % rel_repo_dir,
         '--wrapper-version=%s' % ver_str,
         '--wrapper-path=%s' % wrapper_path,
@@ -747,7 +764,7 @@ def main(orig_args):
   me.extend(orig_args)
   me.extend(extra_args)
   try:
-    os.execv(repo_main, me)
+    os.execv(sys.executable, me)
   except OSError as e:
     _print("fatal: unable to start %s" % repo_main, file=sys.stderr)
     _print("fatal: %s" % e, file=sys.stderr)
