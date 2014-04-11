@@ -2,11 +2,6 @@
 
 . load-config.sh
 
-VARIANT=${VARIANT:-eng}
-PRODUCT_NAME=${PRODUCT_NAME:-full_${DEVICE}}
-DEVICE=${DEVICE:-${PRODUCT_NAME}}
-LUNCH=${LUNCH:-${PRODUCT_NAME}-${VARIANT}}
-
 export USE_CCACHE=yes &&
 export GECKO_PATH &&
 export GAIA_PATH &&
