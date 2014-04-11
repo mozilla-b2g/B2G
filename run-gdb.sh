@@ -19,6 +19,10 @@ if [ -z "${GDB}" ]; then
       GDB=prebuilt/$(uname -s | tr "[[:upper:]]" "[[:lower:]]")-x86/toolchain/arm-linux-androideabi-4.4.x/bin/arm-linux-androideabi-gdb
    elif [ -d prebuilts ]; then
       GDB=prebuilts/gcc/$(uname -s | tr "[[:upper:]]" "[[:lower:]]")-x86/arm/arm-linux-androideabi-4.7/bin/arm-linux-androideabi-gdb
+      PYTHON_DIR=prebuilts/python/$(uname -s | tr "[[:upper:]]" "[[:lower:]]")-x86/2.7.5
+      if [ -d $PYTHON_DIR ]; then
+        export PYTHONHOME=$PYTHON_DIR
+      fi
    else
       echo "Not sure where gdb is located. Override using GDB= or fix the script."
       exit 1
