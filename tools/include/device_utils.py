@@ -257,7 +257,7 @@ def notify_and_pull_files(outfiles_prefixes,
     if files_gotten < files_expected:
         print('')
         print("We've waited %ds but the only relevant files we see are" % max_wait)
-        print('\n'.join(['  ' + f for f in new_files + new_unified_files]))
+        print('\n'.join(['  ' + f for f in new_files | new_unified_files]))
         print('We expected %d but see only %d files.  Giving up...' %
               (files_expected, files_gotten))
         raise Exception("Unable to pull some files.")
