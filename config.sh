@@ -135,7 +135,7 @@ case "$1" in
 
 "tarako")
 	echo DEVICE=sp6821a_gonk >> .tmp-config &&
-	echo LUNCH=sp6821a_gonk-userdebug >> .tmp-config &&
+	echo PRODUCT_NAME=sp6821a_gonk >> .tmp-config &&
 	repo_sync $1
 	;;
 
