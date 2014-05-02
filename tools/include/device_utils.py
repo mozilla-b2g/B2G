@@ -238,8 +238,11 @@ def notify_and_pull_files(outfiles_prefixes,
         sys.stdout.write('\rGot %d/%d files.' % (files_gotten, files_expected))
         sys.stdout.flush()
 
-        if files_gotten == files_expected:
+        if files_gotten >= files_expected:
             print('')
+            if files_gotten > files_expected:
+                print("WARNING: Got more files than expected!")
+                print("(Is MOZ_IGNORE_NUWA_PROCESS set incorrectly?)")
             break
 
         sleep(wait_interval)
