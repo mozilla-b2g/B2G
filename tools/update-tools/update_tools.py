@@ -852,6 +852,14 @@ class FlashFotaBuilder(object):
                  p.device, p.mount_point))
             self.generator.mounts.add(p.mount_point)
 
+    def AssertSystemHasRwAccess(self):
+        """
+           Assert that /system is mounted in rw mode
+        """
+        self.generator.Print("Checking /system is writable")
+        self.generator.script.append('assert(run_program("/system/bin/touch", "/system/bin/") == 0);')
+        self.generator.Print("Partition is writable, we can continue")
+
     def import_releasetools(self):
         releasetools_dir = os.path.join(b2g_dir, "build", "tools", "releasetools")
         sys.path.append(releasetools_dir)
@@ -895,6 +903,8 @@ class FlashFotaBuilder(object):
 
         for mount_point in self.fstab:
             self.AssertMountIfNeeded(mount_point)
+
+        self.AssertSystemHasRwAccess()
 
         if self.fota_type == 'partial':
             for d in self.fota_dirs:
