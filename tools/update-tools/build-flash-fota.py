@@ -44,6 +44,10 @@ def build_flash_fota(args):
 	builder.fota_dirs = args.fota_dirs.split(' ')
         builder.fota_files = [line.rstrip() for line in open(args.fota_files, 'r')]
 
+    builder.fota_check_device_name = args.fota_check_device_name
+    builder.fota_check_gonk_version = args.fota_check_gonk_version
+    builder.system_dir = args.system_dir
+
     builder.build_flash_fota(args.system_dir, public_key, private_key,
                              output_zip)
     print "FOTA Flash ZIP generated: %s" % output_zip
@@ -76,6 +80,14 @@ def main():
     fota_group.add_argument("--fota-files", dest="fota_files",
         required=False, default="",
         help="file containing list of files in /system to include")
+
+    fota_checks_group = parser.add_argument_group("fota_checks_group")
+    fota_checks_group.add_argument("--fota-check-device-name", dest="fota_check_device_name",
+        default=None, required=False,
+        help="'add a check to prevent the update from being installed on a device different from TARGET_DEVICE")
+    fota_checks_group.add_argument("--fota-check-gonk-version", dest="fota_check_gonk_version",
+        default=False, required=False, action="store_true",
+        help="add checks to verify that the device's libraries match the ones the update depends on")
 
     signing_group = parser.add_argument_group("signing options")
     signing_group.add_argument("-d", "--dev-key", dest="dev_key",

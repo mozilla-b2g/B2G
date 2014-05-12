@@ -32,6 +32,10 @@ import zipfile
 this_dir = os.path.abspath(os.path.dirname(__file__))
 b2g_dir = os.path.dirname(os.path.dirname(this_dir))
 bin_dir = os.path.join(this_dir, "bin")
+b2g_libs = [
+    "libfreebl3.so", "libmozglue.so", "libnss3.so",
+    "libnssckbi.so", "libsoftokn3.so", "libxul.so"
+]
 
 def validate_env(parser):
     if platform.system() not in ("Linux", "Darwin"):
@@ -860,6 +864,58 @@ class FlashFotaBuilder(object):
         self.generator.script.append('assert(run_program("/system/bin/touch", "/system/bin/") == 0);')
         self.generator.Print("Partition is writable, we can continue")
 
+    def GetDependencies(self, path):
+        """
+           Find dependencies from readelf output
+        """
+        so_re = re.compile(r".*\[(.*)\.so\]")
+        result = run_command(["readelf", "-d", path])
+        dependencies = []
+        for line in result.splitlines():
+            if line.find("(NEEDED)") > 0:
+                match = so_re.match(line)
+                if match and not (match.group(1) + ".so" in b2g_libs):
+                    # print "Adding dep against", match.group(1), "for", path
+                    dependencies.append(match.group(1) + ".so")
+        return dependencies
+
+    def GetSha1Values(self):
+        """
+           Build a list of file/sha1 values
+        """
+        b2g_dir = os.path.join(self.system_dir, "b2g")
+        b2g_bins = b2g_libs + [ "b2g", "plugin-container", "updater" ]
+        b2g_exec_files = map(lambda x: os.path.join(b2g_dir, x), b2g_bins)
+
+        deps_list = []
+        for p in b2g_exec_files:
+            deps_list = list(set(deps_list + self.GetDependencies(p)))
+
+        sha1_list = []
+        for root, dirs, files in os.walk(self.system_dir):
+            for file in files:
+                if file in deps_list:
+                    fpath = os.path.join(root, file)
+                    rpath = fpath.replace(self.system_dir, "/system")
+                    with open(fpath, 'r') as lib:
+                        hasher = hashlib.sha1()
+                        hasher.update(lib.read())
+                        sha1_list.append({
+                            'file': rpath,
+                            'sha1': hasher.hexdigest()
+                        })
+        return sha1_list
+
+    def AssertGonkVersion(self):
+        """
+           Assert that the gonk libs sha1 hashes are okay
+        """
+        self.generator.Print("Checking Gonk version")
+        for e in self.GetSha1Values():
+            self.generator.Print("Checking %s" % (e['file'],))
+            self.generator.script.append(('assert(sha1_check(read_file("%s"), "%s"));') % (e['file'], e['sha1'],))
+        self.generator.Print("Gonk version is okay")
+
     def import_releasetools(self):
         releasetools_dir = os.path.join(b2g_dir, "build", "tools", "releasetools")
         sys.path.append(releasetools_dir)
@@ -894,6 +950,9 @@ class FlashFotaBuilder(object):
     def build_flash_script(self):
         self.generator.Print("Starting B2G FOTA: " + self.fota_type)
 
+        if self.fota_check_device_name:
+            self.generator.AssertDevice(self.fota_check_device_name)
+
         if not self.fota_type == 'partial':
             for mount_point, partition in self.fstab.iteritems():
                 partition_type = common.PARTITION_TYPES[partition.fs_type]
@@ -903,6 +962,9 @@ class FlashFotaBuilder(object):
 
         for mount_point in self.fstab:
             self.AssertMountIfNeeded(mount_point)
+
+        if self.fota_type == 'partial' and self.fota_check_gonk_version:
+            self.AssertGonkVersion()
 
         self.AssertSystemHasRwAccess()
 
