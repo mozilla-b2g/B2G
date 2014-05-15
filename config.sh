@@ -156,6 +156,12 @@ case "$1" in
 	repo_sync $1
 	;;
 
+"vixen")
+	echo DEVICE=vixen >> .tmp-config &&
+	echo PRODUCT_NAME=vixen >> .tmp-config &&
+	repo_sync $1
+	;;  
+
 "emulator"|"emulator-jb"|"emulator-kk")
 	echo DEVICE=generic >> .tmp-config &&
 	echo LUNCH=full-eng >> .tmp-config &&
@@ -200,6 +206,7 @@ case "$1" in
 	echo - tara
 	echo - dolphin
 	echo - pandaboard
+	echo - vixen
 	echo - flatfish
 	echo - flame
 	echo - emulator
