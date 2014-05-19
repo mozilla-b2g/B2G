@@ -916,6 +916,19 @@ class FlashFotaBuilder(object):
             self.generator.script.append(('assert(sha1_check(read_file("%s"), "%s"));') % (e['file'], e['sha1'],))
         self.generator.Print("Gonk version is okay")
 
+    def AssertDeviceOrModel(self, device):
+        """
+           Assert that the device identifier is the given string.
+        """
+        self.generator.Print("Checking device")
+        cmd = ('assert('
+               'getprop("ro.build.product") == "%s" || '
+               'getprop("ro.product.device") == "%s" || '
+               'getprop("ro.product.model") == "%s"'
+               ');' % (device, device, device))
+        self.generator.script.append(cmd)
+        self.generator.Print("Device is compatible")
+
     def import_releasetools(self):
         releasetools_dir = os.path.join(b2g_dir, "build", "tools", "releasetools")
         sys.path.append(releasetools_dir)
@@ -951,7 +964,7 @@ class FlashFotaBuilder(object):
         self.generator.Print("Starting B2G FOTA: " + self.fota_type)
 
         if self.fota_check_device_name:
-            self.generator.AssertDevice(self.fota_check_device_name)
+            self.AssertDeviceOrModel(self.fota_check_device_name)
 
         if not self.fota_type == 'partial':
             for mount_point, partition in self.fstab.iteritems():
