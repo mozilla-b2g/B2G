@@ -261,10 +261,13 @@ flash_gaia()
 		echo "Push to /system/b2g ..."
 		GAIA_MAKE_FLAGS+=" GAIA_INSTALL_PARENT=/system/b2g"
 	else
+		echo "Detect GAIA_INSTALL_PARENT ..."
 		# This part has been re-implemented in Gaia build script (bug 915484),
 		# XXX: Remove this once we no longer support old Gaia branches.
+		# Install to /system/b2g if webapps.json does not exist, or
+		# points any installed app to /system/b2g.
 		run_adb wait-for-device
-		if run_adb shell cat /data/local/webapps/webapps.json | grep -qs '"basePath": "/system' ; then
+		if run_adb shell 'cat /data/local/webapps/webapps.json || echo \"basePath\": \"/system\"' | grep -qs '"basePath": "/system' ; then
 			echo "Push to /system/b2g ..."
 			GAIA_MAKE_FLAGS+=" GAIA_INSTALL_PARENT=/system/b2g"
 		else
