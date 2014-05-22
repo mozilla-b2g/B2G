@@ -89,6 +89,8 @@ flash_fastboot()
 		;;
 	esac
 
+	delete_single_variant_persist
+
 	case $DEVICE in
 	"helix")
 		run_adb reboot oem-1
@@ -165,6 +167,7 @@ flash_heimdall()
 		exit -1
 	fi
 
+	delete_single_variant_persist &&
 	run_adb reboot download && sleep 8
 	if [ $? -ne 0 ]; then
 		echo Couldn\'t reboot into download mode. Hope you\'re already in download mode
@@ -239,6 +242,11 @@ delete_extra_gecko_files_on_device()
 		run_adb shell "cd /system/b2g && rm $files_to_remove" > /dev/null
 	fi
 	return 0
+}
+
+delete_single_variant_persist()
+{
+	run_adb shell rm -r /persist/svoperapps > /dev/null
 }
 
 flash_gecko()
