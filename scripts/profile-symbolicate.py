@@ -52,6 +52,7 @@ class Library:
     else:
       target_tools_prefix = "arm-eabi-"
     args = [target_tools_prefix + "addr2line", "-C", "-f", "-e", self.host_name]
+    nm_args = ["gecko/tools/profiler/nm-symbolicate.py", self.host_name]
     for address_str in addresses_strs:
       lib_address = int(address_str, 0) - self.start + self.offset
       if self.verbose:
@@ -60,6 +61,7 @@ class Library:
       # the call, which might be different function thanks to inlining:
       adj_address = (lib_address & ~1) - 1
       args.append("0x%08x" % adj_address)
+      nm_args.append("0x%08x" % adj_address)
     # Calling addr2line will return 2 lines for each address. The output will be something
     # like the following:
     #   PR_IntervalNow
@@ -67,6 +69,16 @@ class Library:
     #   PR_Unlock
     #   /home/work/B2G-profiler/mozilla-inbound/nsprpub/pr/src/pthreads/ptsynch.c:191
     syms_and_lines = subprocess.check_output(args).split("\n")
+
+    # Check if we had no useful output from addr2line. If so well try using the symbol table
+    # from nm.
+    has_good_line = False
+    for line in syms_and_lines:
+      if line != "??" and line != "??:0" and line != "":
+        has_good_line = True
+    if has_good_line == False:
+      syms_and_lines = subprocess.check_output(nm_args).split("\n")
+
     syms = []
     for i in range(len(addresses_strs)):
       syms.append(syms_and_lines[i*2] + " (in " + self.target_name + ")")
@@ -120,14 +132,24 @@ class Library:
       lib_name = self.FindLibInTree(basename, gecko_objdir, exclude_dir="dist")
       if not lib_name:
         # Probably an android library
+        # Look in /symbols first, fallback to /system for partial symbols
         if "PRODUCT_OUT" in os.environ:
           product_out = os.environ["PRODUCT_OUT"] + "/symbols"
         else:
-          product_out = "out/target/product"
+          product_out = "out/target/product/symbols"
         if not os.path.isdir(product_out):
           print(product_out, "isn't a directory");
           sys.exit(1)
         lib_name = self.FindLibInTree(basename, product_out)
+        if not lib_name:
+          if "PRODUCT_OUT" in os.environ:
+            product_out = os.environ["PRODUCT_OUT"] + "/system"
+          else:
+            product_out = "out/target/product/system"
+          if not os.path.isdir(product_out):
+            print(product_out, "isn't a directory");
+            sys.exit(1)
+          lib_name = self.FindLibInTree(basename, product_out)
       if lib_name:
         self.host_name = lib_name
         if self.verbose:
