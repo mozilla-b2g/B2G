@@ -69,6 +69,14 @@ fastboot_flash_image()
 	fi
 }
 
+fastboot_flash_image_if_exists()
+{
+	if [ -e "out/target/product/$DEVICE/$1.img" ]; then
+		fastboot_flash_image $1
+	fi
+}
+
+
 flash_fastboot()
 {
 	local lockedness=$1 project=$2
@@ -81,10 +89,10 @@ flash_fastboot()
 		;;
 	esac
 	case $project in
-	"system"|"boot"|"userdata"|"")
+	"system"|"boot"|"userdata"|"cache"|"")
 		;;
 	*)
-		echo "$0: Unrecognized project: $project"
+		echo "$0: Unrecognized project/partition: $project"
 		return 1
 		;;
 	esac
@@ -115,13 +123,12 @@ flash_fastboot()
 	esac
 
 	case $project in
-	"system" | "boot" | "userdata")
+	"system" | "boot" | "userdata" | "cache")
 		fastboot_flash_image $project &&
 		run_fastboot reboot
 		;;
 
 	"")
-		# helix doesn't support erase command in fastboot mode.
 		VERB="erase"
 		if [ "$DEVICE" == "hammerhead" ] || [ "$DEVICE" == "mako" ] ||
 		[ "$DEVICE" == "flo" ]; then
@@ -131,6 +138,7 @@ flash_fastboot()
 		if [ "$DEVICE" == "flatfish" ]; then
 			DATA_PART_NAME="data"
 		fi
+		# helix/dolphin don't support erase command in fastboot mode.
 		if [ "$DEVICE" != "helix" -a "$DEVICE_NAME" != "dolphin" ]; then
 			run_fastboot $VERB cache &&
 			run_fastboot $VERB $DATA_PART_NAME
@@ -139,8 +147,8 @@ flash_fastboot()
 			fi
 		fi
 		fastboot_flash_image userdata &&
-		([ ! -e out/target/product/$DEVICE/boot.img ] ||
-		fastboot_flash_image boot) &&
+		fastboot_flash_image_if_exists cache &&
+		fastboot_flash_image_if_exists boot &&
 		fastboot_flash_image system &&
 		run_fastboot reboot &&
 		update_time
