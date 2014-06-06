@@ -30,6 +30,8 @@ def build_flash_fota(args):
     private_key = args.private_key or os.path.join(security_dir,
         args.dev_key + ".pk8")
     output_zip = args.output or "flash.zip"
+    update_bin = args.update_bin or os.path.join(update_tools.b2g_dir, "tools",
+        "update-tools", "bin", "gonk", "update-binary")
 
     system = update_tools.Partition.create_system(args.system_fs_type,
                                                   args.system_location)
@@ -49,7 +51,7 @@ def build_flash_fota(args):
     builder.system_dir = args.system_dir
 
     builder.build_flash_fota(args.system_dir, public_key, private_key,
-                             output_zip)
+                             output_zip, update_bin)
     print "FOTA Flash ZIP generated: %s" % output_zip
 
 def main():
@@ -102,6 +104,10 @@ def main():
     signing_group.add_argument("-K", "--public-key", dest="public_key",
         metavar="PUBLIC_KEY", default=None,
         help="Public key used for signing the update.zip. Overrides --dev-key.")
+
+    parser.add_argument("-u", "--update-bin", dest="update_bin",
+        required=False, default=None,
+        help="Specify update-binary to be used in update.zip.")
 
     parser.add_argument("-o", "--output", dest="output", metavar="ZIP",
         help="Output to ZIP. Default: flash.zip", default=None)

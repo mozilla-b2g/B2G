@@ -377,9 +377,8 @@ class FotaZip(zipfile.ZipFile):
     def write_updater_script(self, script):
         self.writestr(self.UPDATER_SCRIPT, script)
 
-    def write_default_update_binary(self):
-        prebuilt_update_binary = os.path.join(bin_dir, "gonk", "update-binary")
-        self.write(prebuilt_update_binary, self.UPDATE_BINARY)
+    def write_default_update_binary(self, update_bin):
+        self.write(update_bin, self.UPDATE_BINARY)
 
     def write_recursive(self, path, zip_path=None, filter=None):
         def zip_relpath(file_path):
@@ -406,7 +405,7 @@ class FotaZip(zipfile.ZipFile):
                     dirs.remove(d)
 
 class FotaZipBuilder(object):
-    def build_unsigned_zip(self, update_dir, output_zip):
+    def build_unsigned_zip(self, update_dir, output_zip, update_bin):
         if not os.path.exists(update_dir):
             raise UpdateException("Update dir doesn't exist: %s" % update_dir)
 
@@ -419,7 +418,7 @@ class FotaZipBuilder(object):
 
         if not os.path.exists(update_binary):
             print "Warning: update-binary not found, using default"
-            update_zipfile.write_default_update_binary()
+            update_zipfile.write_default_update_binary(update_bin)
 
         update_zipfile.write_recursive(update_dir)
         update_zipfile.close()
@@ -947,14 +946,14 @@ class FlashFotaBuilder(object):
             return False
         return True
 
-    def build_flash_fota(self, system_dir, public_key, private_key, output_zip):
+    def build_flash_fota(self, system_dir, public_key, private_key, output_zip, update_bin):
         fd, unsigned_zip = tempfile.mkstemp()
         os.close(fd)
 
         with FotaZip(unsigned_zip, "w") as flash_zip:
             flash_zip.write_recursive(system_dir, "system", filter=self.zip_filter)
             flash_zip.write_updater_script(self.build_flash_script())
-            flash_zip.write_default_update_binary()
+            flash_zip.write_default_update_binary(update_bin)
 
         FotaZipBuilder().sign_zip(unsigned_zip, public_key, private_key,
                                   output_zip)

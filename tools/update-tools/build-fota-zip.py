@@ -22,14 +22,14 @@ import sys
 import tempfile
 import update_tools
 
-def build_fota_zip(update_dir, public_key, private_key, output_zip):
+def build_fota_zip(update_dir, public_key, private_key, output_zip, update_bin):
     try:
         builder = update_tools.FotaZipBuilder()
 
         stage_dir = tempfile.mkdtemp()
         unsigned_zip = os.path.join(stage_dir, "update-unsigned.zip")
 
-        builder.build_unsigned_zip(update_dir, unsigned_zip)
+        builder.build_unsigned_zip(update_dir, unsigned_zip, update_bin)
         print "Public key: %s" % public_key
         print "Private key: %s" % private_key
 
@@ -56,6 +56,10 @@ def main():
         metavar="PUBLIC_KEY", default=None,
         help="Public key used for signing the update.zip. Overrides --dev-key.")
 
+    parser.add_argument("-u", "--update-bin", dest="update_bin",
+        required=False, default=None,
+        help="Specify update-binary to be used in update.zip.")
+
     parser.add_argument("-o", "--output", dest="output", metavar="ZIP",
         help="Output to ZIP. Default: update-dir.zip", default=None)
 
@@ -78,9 +82,11 @@ def main():
         options.dev_key + ".x509.pem")
     private_key = options.private_key or os.path.join(security_dir,
         options.dev_key + ".pk8")
+    update_bin = args.update_bin or os.path.join(update_tools.b2g_dir, "tools",
+        "update-tools", "bin", "gonk", "update-binary")
 
     output_zip = options.output or update_dir + ".zip"
-    build_fota_zip(update_dir, public_key, private_key, output_zip)
+    build_fota_zip(update_dir, public_key, private_key, output_zip, update_bin)
 
 if __name__ == "__main__":
     main()
