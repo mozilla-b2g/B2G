@@ -1,7 +1,7 @@
 #!/bin/bash
 
 if [[ ! -n "$B2G_DIR" ]]; then
-  B2G_DIR=$(cd `dirname $0`; pwd)
+  B2G_DIR=$(cd `dirname ${BASH_SOURCE[0]}`; pwd)
 fi
 
 . "$B2G_DIR/.config"
