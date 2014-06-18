@@ -7,6 +7,10 @@ PROFILE_DIR=/data/local/tmp
 PROFILE_PATTERN=${PROFILE_DIR}/'profile_?_*.txt';
 PREFIX=""
 
+if [ -n "$SPS_PROFILE_DEVICE" ]; then
+  ADB="adb -s ${SPS_PROFILE_DEVICE}"
+fi
+
 FEATURES_FLAG="MOZ_PROFILING_FEATURES"
 DEFAULT_FEATURES=js,leaf
 
@@ -134,7 +138,7 @@ is_profiler_running() {
 start_with_args() {
   fileName="/data/local/tmp/profiler.options"
   B2G_PID=""
-  adb shell rm $fileName &> /dev/null
+  ${ADB} shell rm $fileName &> /dev/null
   features=""
   threads=""
 
@@ -219,15 +223,64 @@ remove_profile_files() {
   echo " done"
 }
 
+
+###########################################################################
+#
+# Make sure that the basic requirements for a video capture profiles
+# are met.
+#
+check_video_capture_requirements() {
+  if ! hash avconv 2> /dev/null; then
+    echo "avconv not found, please install it."
+    exit 1
+  fi
+  if [ -z "$SPS_VIDEO_DEVICE" ]; then
+    echo "You must have \$SPS_VIDEO_DEVICE set to an android device that can capture a video feed."
+    exit 1
+  fi
+  if [ -z "$SPS_VIDEO_SCP_DEST" ]; then
+    echo "You must have \$SPS_VIDEO_SCP_DEST set to a public_html folder."
+    exit 1
+  fi
+  if [ -z "$SPS_VIDEO_LINK" ]; then
+    echo "You must have \$SPS_VIDEO_LINK to the HTTP prefix for \$SPS_VIDEO_SCP_DEST."
+    exit 1
+  fi
+}
+
 ###########################################################################
 #
 # Capture the profiling information from a given process.
 #
 HELP_capture="Signals, pulls, and symbolicates the profile data"
 cmd_capture() {
+  # Start recording with the camera
+  if [ "$1" == "-video" ]; then
+    check_video_capture_requirements
+    adb -s "$SPS_VIDEO_DEVICE" shell "am start -a android.media.action.VIDEO_CAPTURE"
+    if [ $? != 0 ]; then
+      exit 1
+    fi
+
+    FILES_BEFORE="$(adb -s "$SPS_VIDEO_DEVICE" shell ls "/sdcard/DCIM/Camera/*.mp4" | tr '\r' ' ')"
+
+    echo "Point the camera so that the QR code is visible at all times."
+    echo "If you do not see th QR code then set layers.frame-counter;true and retry."
+    echo ""
+    echo "Hit ENTER when ready to start recording"
+    read anykey
+
+    adb -s "$SPS_VIDEO_DEVICE" shell "input keyevent KEYCODE_CAMERA"
+
+    echo "Recording in progress."
+    echo ""
+    echo "Hit ENTER when ready to stop capture"
+    read anykey
+  fi
+
   # Send the signal right away. If the profiler wasn't started, this will
   # print an error message and exit.
-  cmd_signal "$1"
+  cmd_signal
   get_comms
   declare -a local_filename
   local timestamp=$(date +"%H%M")
@@ -260,6 +313,35 @@ cmd_capture() {
     wait
     echo "Done"
   else
+
+    # Pull the nwest video files
+    if [ "$1" == "-video" ]; then
+      adb -s "$SPS_VIDEO_DEVICE" shell "input keyevent KEYCODE_CAMERA"
+      sleep 2 # Wait for the video to save
+      FILES_AFTER=$(adb -s "$SPS_VIDEO_DEVICE" shell ls "/sdcard/DCIM/Camera/*.mp4" | tr '\r' ' ')
+      for i in ${FILES_AFTER}; do
+        unset found
+        for j in ${FILES_BEFORE}; do
+          if [ "$i" == "$j" ]; then
+            found=true
+          fi
+        done
+        if [ -z "$found" ]; then
+          SPS_VIDEO_FILE="$i"
+        fi
+      done
+      if [ -z "$SPS_VIDEO_FILE" ]; then
+        echo "Failed to get video capture"
+        exit 1
+      fi
+      VIDEO_FILE=video_capture_$(date +"%s").webm
+      adb -s "$SPS_VIDEO_DEVICE" pull "$SPS_VIDEO_FILE" video_capture.mp4
+      # Transcode video while stripping audio. When mp4 is supported everywhere this step should only strip the audio
+      avconv -y -i video_capture.mp4 -an -c:v libvpx -minrate 1M -maxrate 8M -b:v 8M video_capture.mp4.webm "$VIDEO_FILE"
+      echo "Uploading video, you may be prompted for your ssh passphrase"
+      scp -p "$VIDEO_FILE" "$SPS_VIDEO_SCP_DEST"/"$VIDEO_FILE"
+    fi
+
     pids="${CMD_SIGNAL_PID}"
     profiles_count=0
     profiles_to_merge=""
@@ -277,12 +359,15 @@ cmd_capture() {
         fi
       fi
     done
-    if [ $profiles_count -gt 1 ]; then
-      echo "Merging profile:$profiles_to_merge"
-      ./gecko/tools/profiler/merge-profiles.py $profiles_to_merge > profile_captured.sym
-      echo ""
-      echo "Results: profile_captured.sym"
+    SPS_VIDEO_ARGS=
+    if [ -n "$SPS_VIDEO_FILE" ]; then
+      SPS_VIDEO_ARGS="--video=$SPS_VIDEO_LINK/$VIDEO_FILE"
     fi
+    echo "Merging profile: $profiles_to_merge"
+    echo ./gecko/tools/profiler/merge-profiles.py ${SPS_VIDEO_ARGS} $profiles_to_merge
+    ./gecko/tools/profiler/merge-profiles.py ${SPS_VIDEO_ARGS} $profiles_to_merge > profile_captured.sym
+    echo ""
+    echo "Results: profile_captured.sym"
   fi
   # cmd_pull should remove each file as we pull it. This just covers the
   # case where it doesn't
