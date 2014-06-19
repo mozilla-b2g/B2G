@@ -14,12 +14,25 @@ if [ ! -f "`which \"$ADB\"`" ]; then
 fi
 echo "ADB Location: " $ADB
 
+case $DEVICE in
+    generic_x86)
+        TARGET_ARCH=x86
+        TARGET_TRIPLE=i686-linux-android
+        ;;
+    *)
+        TARGET_ARCH=arm
+        TARGET_TRIPLE=arm-linux-androideabi
+        ;;
+esac
+
+HOST_OS=$(uname -s | tr "[[:upper:]]" "[[:lower:]]")-x86
+
 if [ -z "${GDB}" ]; then
    if [ -d prebuilt ]; then
-      GDB=prebuilt/$(uname -s | tr "[[:upper:]]" "[[:lower:]]")-x86/toolchain/arm-linux-androideabi-4.4.x/bin/arm-linux-androideabi-gdb
+      GDB=prebuilt/${HOST_OS}/toolchain/${TARGET_TRIPLE}-4.4.x/bin/${TARGET_TRIPLE}-gdb
    elif [ -d prebuilts ]; then
-      GDB=prebuilts/gcc/$(uname -s | tr "[[:upper:]]" "[[:lower:]]")-x86/arm/arm-linux-androideabi-4.7/bin/arm-linux-androideabi-gdb
-      PYTHON_DIR=prebuilts/python/$(uname -s | tr "[[:upper:]]" "[[:lower:]]")-x86/2.7.5
+      GDB=prebuilts/gcc/${HOST_OS}/${TARGET_ARCH}/${TARGET_TRIPLE}-4.7/bin/${TARGET_TRIPLE}-gdb
+      PYTHON_DIR=prebuilts/python/${HOST_OS}/2.7.5
       if [ -d $PYTHON_DIR ]; then
         export PYTHONHOME=$PYTHON_DIR
       fi
