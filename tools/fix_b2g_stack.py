@@ -158,9 +158,21 @@ class FixB2GStacksOptions(object):
         return os.path.join(self.toolchain_dir, self.toolchain_prefix + bin_name)
 
     def _guess_toolchain_dir(self):
-        return os.path.join(dirname(__file__),
-            '../prebuilt/%s-x86/toolchain/arm-linux-androideabi-4.4.x/bin' %
-                platform.system().lower())
+        patterns = [
+            'prebuilt/%(host)s/toolchain/%(target)s-4.4.x',
+            'prebuilts/gcc/%(host)s/%(target_arch)s/%(target)s-4.7',
+        ]
+        # FIXME, bug 1032524: this shouldn't assume an ARM target.
+        args = {
+            'host': platform.system().lower() + "-x86",
+            'target': 'arm-linux-androideabi',
+            'target_arch': 'arm',
+        }
+        for pattern in patterns:
+            maybe_dir = os.path.join(dirname(__file__), '..', (pattern % args), 'bin')
+            if os.path.exists(maybe_dir):
+                return maybe_dir
+        raise Exception("No toolchain directory found")
 
     def _guess_gonk_product(self, gonk_objdir):
         products_dir = os.path.join(gonk_objdir, 'target/product')
