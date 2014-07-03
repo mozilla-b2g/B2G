@@ -962,6 +962,12 @@ class FlashFotaBuilder(object):
     def build_flash_script(self):
         self.generator.Print("Starting B2G FOTA: " + self.fota_type)
 
+        cmd = ('show_progress(1.0, 0);')
+        self.generator.script.append(self.generator._WordWrap(cmd))
+
+        cmd = ('set_progress(0.25);')
+        self.generator.script.append(self.generator._WordWrap(cmd))
+
         if self.fota_check_device_name:
             self.AssertDeviceOrModel(self.fota_check_device_name)
 
@@ -990,6 +996,9 @@ class FlashFotaBuilder(object):
             self.generator.script.append(self.generator._WordWrap(cmd))
             self.generator.Print("No previous stale update.")
 
+        cmd = ('set_progress(0.5);')
+        self.generator.script.append(self.generator._WordWrap(cmd))
+
         self.generator.Print("Remove stale libdmd.so")
         self.generator.DeleteFiles(["/system/b2g/libdmd.so"])
 
@@ -1000,6 +1009,9 @@ class FlashFotaBuilder(object):
         self.generator.Print("Extracting files to /system")
         self.generator.UnpackPackageDir("system", "/system")
 
+        cmd = ('set_progress(0.75);')
+        self.generator.script.append(self.generator._WordWrap(cmd))
+
         self.generator.Print("Creating symlinks")
         self.generator.MakeSymlinks(self.symlinks)
 
@@ -1009,6 +1021,9 @@ class FlashFotaBuilder(object):
         if self.fota_type == 'partial':
             cmd = ('else ui_print("Restoring previous stale update."); endif;')
             self.generator.script.append(self.generator._WordWrap(cmd))
+
+        cmd = ('set_progress(1.0);')
+        self.generator.script.append(self.generator._WordWrap(cmd))
 
         self.generator.Print("Unmounting ...")
         self.generator.UnmountAll()
