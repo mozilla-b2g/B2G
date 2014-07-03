@@ -189,6 +189,12 @@ def bootstrap(b2g_home):
             print(output)
         f.close()
 
+    # Absolutize GECKO_OBJDIR here, since otherwise mach will try to
+    # absolutize it relative to the topsrcdir, which might be different
+    # if GECKO_PATH is in use.
+    if os.environ.get('GECKO_OBJDIR') is not None:
+       os.environ['GECKO_OBJDIR'] = os.path.join(b2g_home, os.environ['GECKO_OBJDIR'])
+
     # If a gecko source tree is detected, its mach modules are also
     # loaded.
     gecko_dir = os.environ.get('GECKO_PATH', os.path.join(b2g_home, 'gecko'))
