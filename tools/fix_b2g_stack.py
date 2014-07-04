@@ -75,6 +75,12 @@ def pump(dst, src):
     p.start()
     return p
 
+def _none_factory():
+    return None
+
+def _defaultdict_none_factory():
+    return defaultdict(_none_factory)
+
 class FixB2GStacksOptions(object):
     '''Encapsulates arguments used in fix_b2g_stacks_in_file.
 
@@ -189,40 +195,6 @@ class FixB2GStacksOptions(object):
             Please re-run with --product.  Your options are %s.''' %
             (products_dir, products)))
 
-class DefaulterDict(dict):
-    '''DefaulterDict is like defaultdict, but pickleable.
-
-    The main API difference between DefaulterDict and defaultdict is that while
-    defaultdict takes a function which returns the dict's default element when
-    called, DefaulterDict takes an object as its default element and makes a
-    deep copy of it before inserting it as a default.
-
-    We created DefaulterDict to work around the pickle quirk/bug described in
-    [1].  Essentially, because this code may be run by invoking
-    fix_b2g_stack.py directly or by invoking get_about_memory.py, we need to
-    define the magic __module__ attribute on this class and on all user-defined
-    classes and functions this class references, otherwise unpickling will fail.
-
-    It's the fact that this class can't reference other user-defined functions
-    (*) which necessitates the API difference between defaultdict and
-    DefaulterDict.
-
-    (*) I suppose defaultdict might work if we somehow defined __module__ on
-    the default-function; I didn't try.
-
-    [1] http://stefaanlippens.net/pickleproblem
-    '''
-    __module__ = os.path.splitext(basename(__file__))[0]
-
-    def __init__(self, default_item):
-        super(DefaulterDict, self).__init__()
-        self._default_item = default_item
-
-    def __missing__(self, kw):
-        item = copy.deepcopy(self._default_item)
-        self[kw] = item
-        return item
-
 class StackFixerCache():
     '''A cache for StackFixer which occasionally serializes itself to disk.
 
@@ -262,7 +234,7 @@ class StackFixerCache():
             self._lib_metadata = cache['metadata']
             self._validate_lib_metadata()
         else:
-            self._lib_lookups = DefaulterDict(DefaulterDict(None))
+            self._lib_lookups = defaultdict(_defaultdict_none_factory)
             self._lib_metadata = {}
         self._initialized = True
 
