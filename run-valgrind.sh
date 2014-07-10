@@ -20,13 +20,22 @@ if [ "$HAS_VALGRIND" -ne 0 ]; then
     exit 1
 fi
 
+LIBMOZGLUE="$GECKO_OBJDIR/mozglue/build/libmozglue.so"
+LIBXUL="$GECKO_OBJDIR/toolkit/library/build/libxul.so"
+if [ ! -e "$LIBXUL" ]; then
+  # try the old location
+  LIBXUL="$GECKO_OBJDIR/toolkit/library/libxul.so"
+fi
+
 # Load libxul
 if [ "$1" = "debuginfo" ]; then
   echo "Recompiling libxul.so with debug info (this can take a few minutes)"
   $ADB remount
   $ADB shell "rm -rf $B2G_DIR && cp -r /system/b2g $B2G_DIR"
-  cp $GECKO_OBJDIR/toolkit/library/libxul.so $GECKO_OBJDIR/toolkit/library/libxul.debuginfo.so
-  ./prebuilts/gcc/linux-x86/arm/arm-linux-androideabi-4.7/bin/arm-linux-androideabi-strip -R .debug_info $GECKO_OBJDIR/toolkit/library/libxul.debuginfo.so
+  cp "$LIBXUL" "$GECKO_OBJDIR/toolkit/library/libxul.debuginfo.so"
+
+  STRIP=prebuilts/gcc/`uname -s | tr "[[:upper:]]" "[[:lower:]]"`-x86/arm/arm-linux-androideabi-4.7/bin/arm-linux-androideabi-strip
+  $STRIP -R .debug_info "$GECKO_OBJDIR/toolkit/library/libxul.debuginfo.so"
   echo "Pushing debug libxul to phone (this takes about a minute)"
   time $ADB push $GECKO_OBJDIR/toolkit/library/libxul.debuginfo.so $B2G_DIR/libxul.so
   shift
@@ -39,14 +48,16 @@ else
 
   # compress first, to limit amount of data pushed over the slow pipe
   echo "Compressing libxul.so..."
-  time gzip < $GECKO_OBJDIR/toolkit/library/libxul.so > $GECKO_OBJDIR/toolkit/library/libxul.so.gz
+  time gzip < "$LIBXUL" > $GECKO_OBJDIR/toolkit/library/libxul.so.gz
 
   echo "Pushing compressed debug libxul to device (this can take upwards of 5 minutes)"
   time $ADB push $GECKO_OBJDIR/toolkit/library/libxul.so.gz $B2G_DIR/libxul.so.gz
+  time $ADB push "$LIBMOZGLUE" $B2G_DIR/libmozglue.so
 
   echo "Decompressing on phone..."
   time $ADB shell "gzip -d $B2G_DIR/libxul.so.gz"
   $ADB shell "chmod 0755 $B2G_DIR/libxul.so"
+  $ADB shell "chmod 0755 $B2G_DIR/libmozglue.so"
 fi
 
 #$ADB reboot
@@ -64,5 +75,5 @@ fi
 
 # Due to the fact that we follow forks, we can't log to a logfile. Expect the
 # user to redirect stdout.
-$ADB shell "B2G_DIR='/data/valgrind-b2g' HOSTNAME='b2g' LOGNAME='b2g' COMMAND_PREFIX='/system/bin/valgrind -v --fair-sched=try $VALGRIND_ARGS --error-limit=no --smc-check=all-non-file' exec /system/bin/b2g.sh"
+$ADB shell "B2G_DIR='/data/valgrind-b2g' HOSTNAME='b2g' LOGNAME='b2g' COMMAND_PREFIX='/system/bin/valgrind -v --fair-sched=try $VALGRIND_ARGS --soname-synonyms=somalloc=libmozglueZdso --error-limit=no --smc-check=all-non-file' exec /system/bin/b2g.sh"
 
