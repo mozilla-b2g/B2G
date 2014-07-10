@@ -142,6 +142,7 @@ start_with_args() {
   ${ADB} shell rm $fileName &> /dev/null
   features=""
   threads=""
+  tasktracer=""
 
   while getopts "i:m:t:f:p:e:s:" opt "$@"; do
     case $opt in
@@ -198,15 +199,31 @@ start_with_args() {
     fi
   fi
 
-  if [ -z "$B2G_PID" ]
+  if [ -n "`echo $features | grep tasktracer`" ]
   then
-    echo "No B2G process specified. Exiting"
-    exit 1
-  else
-    echo "Starting profiling PID $B2G_PID.."
-    ${ADB} shell "kill -12 ${B2G_PID}"
+    tasktracer="true"
+    clear_pids
+    get_pids
+    echo "Enable feature TaskTracer requires profiling on all current running processes."
+    for pid in ${B2G_PIDS[*]}; do
+      echo "Starting profiling with TaskTracer on PID ${pid}"
+      ${ADB} shell "kill -12 ${pid}"
+    done
     echo "Profiler started"
-    echo
+  fi
+
+  if [ -z "$tasktracer" ]
+  then
+    if [ -z "$B2G_PID" ]
+    then
+      echo "No B2G process specified. Exiting"
+      exit 1
+    else
+      echo "Starting profiling PID $B2G_PID"
+      ${ADB} shell "kill -12 ${B2G_PID}"
+      echo "Profiler started"
+      echo
+    fi
   fi
 }
 
