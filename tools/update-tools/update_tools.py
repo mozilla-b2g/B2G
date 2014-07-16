@@ -481,12 +481,12 @@ class GeckoMarBuilder(object):
         self.make_full_update = os.path.join(packaging_dir,
             "make_full_update.sh")
         if not os.path.exists(self.make_full_update):
-            raise UpdateException("Couldn't find %s " % make_full_update)
+            raise UpdateException("Couldn't find %s " % self.make_full_update)
 
         self.make_incremental_update = os.path.join(packaging_dir,
             "make_incremental_update.sh")
         if not os.path.exists(self.make_incremental_update):
-            raise UpdateException("Couldn't find %s " % make_incremental_update)
+            raise UpdateException("Couldn't find %s " % self.make_incremental_update)
 
     def build_gecko_mar(self, src_dir, output_mar, from_dir=None):
         if from_dir:
