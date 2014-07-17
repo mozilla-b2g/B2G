@@ -244,6 +244,17 @@ def bootstrap(b2g_home):
         if sys.platform.startswith('darwin'):
             xre_path = os.path.join(xre_path, 'XUL.framework', 'Versions', 'Current')
 
+    def get_build_var(name):
+        env = os.environ.copy()
+        env.update({'CALLED_FROM_SETUP': 'true',
+                    'BUILD_SYSTEM': 'build/core'})
+        command = ['make', '--no-print-directory',
+                   '-C', b2g_home,
+                   '-f', 'build/core/config.mk',
+                   'dumpvar-abs-%s' % name]
+        DEVNULL = open(os.devnull, 'wb')
+        return subprocess.check_output(command, env=env, stderr=DEVNULL).strip()
+
     def populate_context(context):
         context.state_dir = state_dir
         context.topdir = gecko_dir
@@ -251,6 +262,7 @@ def bootstrap(b2g_home):
         context.xre_path = xre_path
         # device name is set from load configuration step above
         context.device_name = os.environ.get('DEVICE_NAME', '').rstrip()
+        context.get_build_var = get_build_var
 
     mach = mach.main.Mach(b2g_home)
     mach.populate_context_handler = populate_context
