@@ -10,7 +10,7 @@ import subprocess
 import textwrap
 from time import sleep
 
-def remote_shell(cmd):
+def remote_shell(cmd, verbose=True):
     '''Run the given command on on the device and return stdout.  Throw an
     exception if the remote command returns a non-zero return code.
 
@@ -32,13 +32,15 @@ def remote_shell(cmd):
     if retcode == '0':
         return cmd_out
 
-    print('Remote command %s failed with error code %s' % (cmd, retcode),
-          file=sys.stderr)
-    if cmd_out:
-        print(cmd_out, file=sys.stderr)
+    if verbose:
+        print('Remote command %s failed with error code %s' % (cmd, retcode),
+              file=sys.stderr)
+        if cmd_out:
+            print(cmd_out, file=sys.stderr)
+
     raise subprocess.CalledProcessError(retcode, cmd, cmd_out)
 
-def remote_toolbox_cmd(cmd, args=''):
+def remote_toolbox_cmd(cmd, args='', verbose=True):
     '''Run the given command from /system/bin/toolbox on the device.  Pass
     args, if specified, and return stdout.  Throw an exception if the command
     returns a non-zero return code.
@@ -53,11 +55,11 @@ def remote_toolbox_cmd(cmd, args=''):
     the same output regardless of whether busybox is installed.
 
     '''
-    return remote_shell('/system/bin/toolbox "%s" %s' % (cmd, args))
+    return remote_shell('/system/bin/toolbox "%s" %s' % (cmd, args), verbose)
 
-def remote_ls(dir):
+def remote_ls(dir, verbose=True):
     '''Run ls on the remote device, and return a set containing the results.'''
-    return {f.strip() for f in remote_toolbox_cmd('ls', dir).split('\n')}
+    return {f.strip() for f in remote_toolbox_cmd('ls', dir, verbose).split('\n')}
 
 def shell(cmd, cwd=None, show_errors=True):
     '''Run the given command as a shell script on the host machine.
@@ -269,6 +271,11 @@ def notify_and_pull_files(outfiles_prefixes,
     if remove_outfiles_from_device:
         _remove_files_from_device(all_outfiles_prefixes, old_files)
     return [os.path.basename(f) for f in new_files]
+
+
+def pull_remote_file(remote_file, dest_file):
+    """Copies a file from the device."""
+    shell('adb pull "%s" "%s"' % (remote_file, dest_file))
 
 
 # You probably don't need to call the functions below from outside this module,
