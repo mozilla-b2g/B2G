@@ -57,10 +57,14 @@ def process_dmd_files(dmd_files, args):
             '''))
         traceback.print_exc(e)
 
-def process_dmd_files_impl(dmd_files, args):
-    out_dir = os.path.dirname(dmd_files[0])
 
-    procrank = open(os.path.join(out_dir, 'b2g-procrank'), 'r').read().split('\n')
+def get_proc_names(out_dir):
+    """
+    Retrieves a mapping of process names to their PID as well as the raw
+    output of b2g-procrank.
+    """
+    with open(os.path.join(out_dir, 'b2g-procrank'), 'r') as f:
+        procrank = f.read().split('\n')
     proc_names = {}
     for line in procrank:
         # App names may contain spaces and special characters (e.g.
@@ -73,6 +77,13 @@ def process_dmd_files_impl(dmd_files, args):
         if not match:
             continue
         proc_names[int(match.group(2))] = re.sub('\W', '', match.group(1)).lower()
+    return proc_names, procrank
+
+
+def process_dmd_files_impl(dmd_files, args):
+    out_dir = os.path.dirname(dmd_files[0])
+
+    proc_names, procrank = get_proc_names(out_dir)
 
     for f in dmd_files:
         # Extract the PID (e.g. 111) and UNIX time (e.g. 9999999) from the name
@@ -118,6 +129,33 @@ def process_dmd_files_impl(dmd_files, args):
         fix_b2g_stack.fix_b2g_stacks_in_file(GzipFile(f, 'r'), outfile, args)
         if not args.keep_individual_reports:
             os.remove(f)
+
+
+def get_kgsl_files(out_dir):
+    """Retrieves kgsl graphics memory usage files."""
+    print()
+    print('Processing kgsl files.')
+
+    proc_names, _ = get_proc_names(out_dir)
+
+    try:
+        kgsl_pids = utils.remote_ls('/d/kgsl/proc/', verbose=False)
+    except subprocess.CalledProcessError:
+        # Probably not a kgsl device.
+        print('kgsl graphics memory logs not available for this device.')
+        return
+
+    for pid in filter(None, kgsl_pids):
+        name = proc_names[int(pid)] if int(pid) in proc_names else pid
+        remote_file = '/d/kgsl/proc/%s/mem' % pid
+        dest_file = os.path.join(out_dir, 'kgsl-%s-mem' % name)
+        try:
+            utils.pull_remote_file(remote_file, dest_file)
+        except subprocess.CalledProcessError:
+            print('Unable to retrieve kgsl file: %s' % remote_file)
+
+    print('Done processing kgsl files.')
+
 
 def merge_files(dir, files):
     '''Merge the given memory reporter dump files into one giant file.'''
@@ -232,6 +270,10 @@ def get_and_show_info(args):
 
     process_dmd_files(dmd_files, args)
 
+    if not args.no_kgsl_logs:
+        get_kgsl_files(out_dir)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -277,6 +319,11 @@ def main():
         action='store_true',
         default=False,
         help='Get an abbreviated GC/CC log, instead of a full one.')
+
+    parser.add_argument('--no-kgsl-logs',
+                        action='store_true',
+                        default=False,
+                        help='''Don't get the kgsl graphics memory logs.''')
 
     parser.add_argument('--no-dmd', action='store_true', default=False,
         help='''Don't process DMD logs, even if they're available.''')
