@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-'''Prettifies stacks retrieved from a B2G device.
+"""Prettifies stacks retrieved from a B2G device.
 
 This program takes as input a stream or a file containing stack frames
 formatted like
@@ -18,14 +18,14 @@ line.
 This is an analog to fix-linux-stack.pl and is functionally similar to
 $B2G_ROOT/scripts/profile-symbolicate.py.
 
-'''
+"""
 
 from __future__ import print_function
 
 import sys
-if sys.version_info < (2,7):
+if sys.version_info < (2, 7):
     # We need Python 2.7 because we import argparse.
-    print('This script requires Python 2.7.')
+    print('This script requires Python 2.7.', file=sys.stderr)
     sys.exit(1)
 
 import os
@@ -36,33 +36,33 @@ import argparse
 import platform
 import textwrap
 import threading
-import hashlib
-import copy
 import cPickle as pickle
 import fcntl
-from os.path import dirname, basename
+from os.path import dirname
 from collections import defaultdict
 from gzip import GzipFile
 
-def first(pred, iter):
-    '''Return the first element of iter which matches the predicate pred, or
+
+def first(pred, itr):
+    """Return the first element of itr which matches the predicate pred, or
     return None if no such element exists.
 
     This function avoids running pred unnecessarily, so is suitable for use
     when pred is expensive.
 
-    '''
+    """
     try:
-        return itertools.ifilter(pred, iter).next()
+        return itertools.ifilter(pred, itr).next()
     except StopIteration:
         return None
 
+
 def pump(dst, src):
-    '''Pump the file dst into the file src.  When src hits EOF, close dst.
+    """Pump the file dst into the file src.  When src hits EOF, close dst.
 
     Returns a thread object, so you can e.g. join() on the result.
 
-    '''
+    """
     class Pumper(threading.Thread):
         def run(self):
             while True:
@@ -75,14 +75,17 @@ def pump(dst, src):
     p.start()
     return p
 
+
 def _none_factory():
     return None
+
 
 def _defaultdict_none_factory():
     return defaultdict(_none_factory)
 
+
 class FixB2GStacksOptions(object):
-    '''Encapsulates arguments used in fix_b2g_stacks_in_file.
+    """Encapsulates arguments used in fix_b2g_stacks_in_file.
 
     The args argument to __init__() specifies options passed to
     fix_b2g_stacks_in_file.
@@ -121,7 +124,7 @@ class FixB2GStacksOptions(object):
         program.  For example, cross_bin('nm') returns a path to the
         cross-toolchain's nm binary.
 
-    '''
+    """
     def __init__(self, args):
         def get_arg(arg, default=None):
             try:
@@ -147,10 +150,10 @@ class FixB2GStacksOptions(object):
         self.toolchain_dir = get_arg('toolchain_dir', self._guess_toolchain_dir)
         self.remove_cache = get_arg('remove_cache', False)
 
-        self.gecko_objdir = get_arg('gecko_objdir',
-            os.path.join(dirname(__file__), '../objdir-gecko'))
-        self.gonk_objdir = get_arg('gonk_objdir',
-            os.path.join(dirname(__file__), '../out'))
+        self.gecko_objdir = get_arg(
+            'gecko_objdir', os.path.join(dirname(__file__), '../objdir-gecko'))
+        self.gonk_objdir = get_arg(
+            'gonk_objdir', os.path.join(dirname(__file__), '../out'))
 
         product = get_arg('product')
         if product:
@@ -163,7 +166,8 @@ class FixB2GStacksOptions(object):
     def cross_bin(self, bin_name):
         return os.path.join(self.toolchain_dir, self.toolchain_prefix + bin_name)
 
-    def _guess_toolchain_dir(self):
+    @staticmethod
+    def _guess_toolchain_dir():
         patterns = [
             'prebuilt/%(host)s/toolchain/%(target)s-4.4.x',
             'prebuilts/gcc/%(host)s/%(target_arch)s/%(target)s-4.7',
@@ -180,7 +184,8 @@ class FixB2GStacksOptions(object):
                 return maybe_dir
         raise Exception("No toolchain directory found")
 
-    def _guess_gonk_product(self, gonk_objdir):
+    @staticmethod
+    def _guess_gonk_product(gonk_objdir):
         products_dir = os.path.join(gonk_objdir, 'target/product')
         products = os.listdir(products_dir)
         if not products:
@@ -189,14 +194,15 @@ class FixB2GStacksOptions(object):
         if len(products) == 1:
             return os.path.join(products_dir, products[0])
 
-        raise Exception(textwrap.dedent('''
-            Couldn't auto-detect a product because %s has multiple entries.
+        raise Exception(textwrap.dedent(
+            '''Couldn't auto-detect a product because %s has multiple entries.
 
             Please re-run with --product.  Your options are %s.''' %
             (products_dir, products)))
 
+
 class StackFixerCache():
-    '''A cache for StackFixer which occasionally serializes itself to disk.
+    """A cache for StackFixer which occasionally serializes itself to disk.
 
     This cache stores (lib, offset) --> string mappings, so we can avoid
     calling addr2line.  After every so many puts, we write the cache out to
@@ -215,7 +221,7 @@ class StackFixerCache():
     give up.) But note that I have not tested that this locking works as
     intended.
 
-    '''
+    """
     def __init__(self, options):
         self._initialized = False
         self._lib_lookups = None
@@ -240,10 +246,11 @@ class StackFixerCache():
 
     @staticmethod
     def cache_filename():
-        '''Get the filename of our cache.'''
+        """Get the filename of our cache."""
         return os.path.join(dirname(__file__), '.fix_b2g_stack.cache')
 
-    def _read_cache_from_disk(self):
+    @staticmethod
+    def _read_cache_from_disk():
         try:
             with open(StackFixerCache.cache_filename(), 'rb') as cache_file:
                 try:
@@ -292,7 +299,8 @@ class StackFixerCache():
                 except KeyError:
                     pass
 
-    def _get_lib_metadata(self, lib_path):
+    @staticmethod
+    def _get_lib_metadata(lib_path):
         try:
             st = os.stat(lib_path)
             return (os.path.normpath(os.path.abspath(lib_path)),
@@ -321,12 +329,12 @@ class StackFixerCache():
             self._put_counter = 0
 
     def get_maybe_set(self, lib_path, offset, result):
-        '''Get the addr2line result for (lib_path, offset).
+        """Get the addr2line result for (lib_path, offset).
 
         If (lib_path, offset) is not in our cache, insert |result()| or
         |result|, depending on whether |result| is callable.
 
-        '''
+        """
         self._ensure_initialized()
         if not self._lib_lookups[lib_path][offset]:
             if callable(result):
@@ -335,8 +343,9 @@ class StackFixerCache():
                 self.put(lib_path, offset, result)
         return self._lib_lookups[lib_path][offset]
 
+
 class StackFixer(object):
-    '''An object used for translating (lib, offset) tuples into function+file
+    """An object used for translating (lib, offset) tuples into function+file
     names, using addr2line and a cache.
 
     Here and elsewhere we adopt the convention that |lib| is a library's
@@ -347,7 +356,7 @@ class StackFixer(object):
     gives us a chance to flush the cache to disk, making future invocations
     faster.
 
-    '''
+    """
 
     _addr2line_procs = {}
 
@@ -357,13 +366,13 @@ class StackFixer(object):
         self._options = options
 
     def translate(self, lib, offset, pc=None, fn_guess=None):
-        '''Translate the given offset (an integer) into the given library (e.g.
+        """Translate the given offset (an integer) into the given library (e.g.
         'libxul.so') into a human-readable string and return that string.
 
         pc and fn_guess are hints to make the output look nicer; we don't use
         either of these optional parameters to look up lib+offsets.
 
-        '''
+        """
         lib_path = self._find_lib(lib)
         return self._cache.get_maybe_set(lib_path, offset,
             lambda: self._addr2line(lib, offset, pc, fn_guess))
@@ -372,11 +381,11 @@ class StackFixer(object):
         self._cache.flush()
 
     def _init_lib_path_cache(self):
-        '''Initialize self._lib_path_cache by walking all of the subdirectories
+        """Initialize self._lib_path_cache by walking all of the subdirectories
         of self._options.lib_search_dirs and finding all the '*.so', 'b2g', and
         'plugin-container' files therein.
 
-        '''
+        """
         for root, _, files in itertools.chain(*[os.walk(dir) for dir in
                                                 self._options.lib_search_dirs]):
             for f in files:
@@ -384,14 +393,14 @@ class StackFixer(object):
                     self._lib_path_cache[f].append(os.path.join(root, f))
 
     def _find_lib(self, lib):
-        '''Get a path to the given lib (e.g. 'libxul.so').
+        """Get a path to the given lib (e.g. 'libxul.so').
 
         We prefer unstripped versions of the lib, but if all we can find is a
         stripped version, we'll return that.
 
         If we can't find the lib, we return None.
 
-        '''
+        """
         if not self._lib_path_cache:
             self._init_lib_path_cache()
 
@@ -408,12 +417,12 @@ class StackFixer(object):
         return lib_path
 
     def _lib_has_symbols(self, lib_path):
-        '''Check if the given lib_path has symbols.
+        """Check if the given lib_path has symbols.
 
         We do this by running nm on the library.  If it's stripped, nm will not
         output anything to stdout.
 
-        '''
+        """
         proc = subprocess.Popen(
             [self._options.cross_bin('nm'), lib_path],
             stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -425,7 +434,7 @@ class StackFixer(object):
             proc.kill()
 
     def _addr2line(self, lib, offset, pc, fn_guess):
-        '''Use addr2line to translate the given lib+offset.
+        """Use addr2line to translate the given lib+offset.
 
         We use pc only for aesthetic purposes; it's not passed to addr2line or
         anything.
@@ -435,10 +444,11 @@ class StackFixer(object):
         able to resolve function names that addr2line can't.)  fn_guess should
         be this guess, if you have one.
 
-        '''
+        """
         def addr_str():
             _pc = ('0x%x ' % pc) if pc != None else ''
             return '(%s%s+0x%x)' % (_pc, lib, offset)
+
         def fallback_str():
             _fn_guess = fn_guess + ' ' if fn_guess and fn_guess != '???' else ''
             return '%s%s' % (_fn_guess, addr_str())
@@ -460,19 +470,20 @@ class StackFixer(object):
             # first line is of the form "foo()", and the second line is of the
             # form "foo.cpp:123".
             func = proc.stdout.readline().strip()
-            file = os.path.normpath(proc.stdout.readline().strip())
-            if func == '??' and file == '??:0':
+            file_name = os.path.normpath(proc.stdout.readline().strip())
+            if func == '??' and file_name == '??:0':
                 # addr2line wasn't helpful here.
                 return '%s (no addr2line)' % fallback_str()
-            return '%s %s %s' % (func, file, addr_str())
+            return '%s %s %s' % (func, file_name, addr_str())
         except IOError as e:
             # If our addr2line process dies, don't try to restart it.  Just
             # leave it in a dead state and presumably every time we read/write
             # to/from it, we'll hit this case.
             return '%s (addr2line exception)' % fallback_str()
 
+
 def fix_b2g_stacks_in_file(infile, outfile, args={}, **kwargs):
-    '''Read lines from infile and output those lines to outfile with their
+    """Read lines from infile and output those lines to outfile with their
     stack frames rewritten.
 
     infile and outfile may be a files or file-like objects.  For example, to
@@ -482,7 +493,7 @@ def fix_b2g_stacks_in_file(infile, outfile, args={}, **kwargs):
     both).  See the docs on FixB2GStacksOptions for the supported argument
     names.
 
-    '''
+    """
     if args and kwargs:
         raise Exception("Can't pass args and kwargs to fix_b2g_stacks_in_file.")
     options = FixB2GStacksOptions(args if args else kwargs)
@@ -490,7 +501,7 @@ def fix_b2g_stacks_in_file(infile, outfile, args={}, **kwargs):
     if options.remove_cache:
         try:
             os.remove(StackFixerCache.cache_filename())
-        except:
+        except Exception:
             pass
 
     matcher = re.compile(
@@ -506,6 +517,7 @@ def fix_b2g_stacks_in_file(infile, outfile, args={}, **kwargs):
         re.VERBOSE)
 
     fixer = StackFixer(options)
+
     def subfn(match):
         return fixer.translate(match.group('lib'),
                                int(match.group('offset'), 16),
@@ -530,8 +542,9 @@ def fix_b2g_stacks_in_file(infile, outfile, args={}, **kwargs):
     p.join()
     fixer.close()
 
+
 def add_argparse_arguments(parser):
-    '''Add arguments to an argparse parser which make the parser's result
+    """Add arguments to an argparse parser which make the parser's result
     suitable for passing to fix_b2g_stacks_in_file.
 
     You might use this in your code as something like:
@@ -540,7 +553,7 @@ def add_argparse_arguments(parser):
       b2g_stack_group = parser.add_argument_group(...)
       fix_b2g_stack.add_argparse_arguments(b2g_stack_group)
 
-    '''
+    """
     parser.add_argument('--toolchain-dir', metavar='DIR',
                         help='Directory containing toolchain binaries')
     parser.add_argument('--toolchain-prefix', metavar='PREFIX',
@@ -556,7 +569,8 @@ def add_argparse_arguments(parser):
                         help="Delete the persistent addr2line cache before running.")
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description=__doc__,
+    parser = argparse.ArgumentParser(
+        description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('infile', metavar='INFILE', nargs='?',
                         help='File to read from (default: stdin).  gz files are OK.')
