@@ -13,7 +13,7 @@ from __future__ import print_function
 import sys
 if sys.version_info < (2,7):
     # We need Python 2.7 because we import argparse.
-    print('This script requires Python 2.7.')
+    print('This script requires Python 2.7.', file=sys.stderr)
     sys.exit(1)
 
 import os
@@ -58,7 +58,7 @@ def compress_logs(log_filenames, out_dir):
     for (filename, proc) in compression_procs:
         proc.wait()
         if proc.returncode:
-            print('Compression of %s failed!' % filename)
+            print('Compression of %s failed!' % filename, file=sys.stderr)
             raise subprocess.CalledProcessError(proc.returncode,
                                                 [compression_prog, filename],
                                                 None)
