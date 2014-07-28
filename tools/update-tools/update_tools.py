@@ -47,6 +47,9 @@ def validate_env(parser):
     if sys.version_info < (2, 7):
         parser.error("This tool requires Python 2.7 or greater")
 
+    if not which("arm-linux-androideabi-readelf", path=os.environ.get("ANDROID_TOOLCHAIN")):
+        parser.error("No readelf binary in ANDROID_TOOLCHAIN")
+
 def run_command(*args, **kwargs):
     try:
         if "input" in kwargs:
@@ -868,7 +871,9 @@ class FlashFotaBuilder(object):
            Find dependencies from readelf output
         """
         so_re = re.compile(r".*\[(.*)\.so\]")
-        result = run_command(["readelf", "-d", path])
+        readelf_android = "arm-linux-androideabi-readelf"
+        readelf_path = os.path.join(os.environ.get("ANDROID_TOOLCHAIN"), readelf_android)
+        result = run_command([readelf_path, "-d", path])
         dependencies = []
         for line in result.splitlines():
             if line.find("(NEEDED)") > 0:
