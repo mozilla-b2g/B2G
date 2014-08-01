@@ -933,6 +933,45 @@ class FlashFotaBuilder(object):
         self.generator.script.append(cmd)
         self.generator.Print("Device is compatible")
 
+    def Format(self):
+        """
+           Edify wrapper to add format() statements.
+
+	   Per bug 1047350 and bug 1008239:
+           Signature of the format() function available in Edify depends on
+           the implementation that gets pulled as update-binary and pushed
+           inside the zip file. Starting with AOSP SDK 16 (JB 4.1), it takes
+           an extra mount_point argument. The rationale here is:
+            - detect the SDK version at build time, and use the proper version
+            - update-binary that is embedded MUST be one built from source or
+              in sync with the source version. Using the prebuilt one from
+              tools/update-tools/bin/gonk/ is not a good idea.
+        """
+        format_statement = None
+        if self.sdk_version < 16:
+            format_statement = \
+                'format("%(fs_type)s", "%(partition_type)s", ' \
+                       '"%(device)s", %(size)d);'
+        else:
+            format_statement = \
+                'format("%(fs_type)s", "%(partition_type)s", ' \
+                       '"%(device)s", %(size)d, "%(mount_point)s");'
+
+        self.generator.Print("Formatting partitions ...")
+        for mount_point, partition in self.fstab.iteritems():
+            partition_type = common.PARTITION_TYPES[partition.fs_type]
+            parameters = {
+                'fs_type': partition.fs_type,
+                'partition_type': partition_type,
+                'device': partition.device,
+                'size': partition.fs_size,
+                'mount_point': mount_point
+            }
+            self.generator.Print("Formatting: %(device)s " \
+                "(%(partition_type)s/%(fs_type)s)" % parameters)
+            self.generator.AppendExtra(format_statement % parameters)
+        self.generator.Print("All partitions formatted.")
+
     def import_releasetools(self):
         releasetools_dir = os.path.join(b2g_dir, "build", "tools", "releasetools")
         sys.path.append(releasetools_dir)
@@ -977,11 +1016,7 @@ class FlashFotaBuilder(object):
             self.AssertDeviceOrModel(self.fota_check_device_name)
 
         if not self.fota_type == 'partial':
-            for mount_point, partition in self.fstab.iteritems():
-                partition_type = common.PARTITION_TYPES[partition.fs_type]
-                self.generator.AppendExtra('format("%s", "%s", "%s", %d);' % \
-                    (partition.fs_type, partition_type, partition.device,
-                     partition.fs_size))
+            self.Format()
 
         for mount_point in self.fstab:
             self.AssertMountIfNeeded(mount_point)
@@ -989,7 +1024,8 @@ class FlashFotaBuilder(object):
         if self.fota_type == 'partial' and self.fota_check_gonk_version:
             self.AssertGonkVersion()
 
-        self.AssertSystemHasRwAccess()
+        if self.fota_type == 'partial':
+            self.AssertSystemHasRwAccess()
 
         if self.fota_type == 'partial':
             for d in self.fota_dirs:
