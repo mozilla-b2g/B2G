@@ -125,10 +125,14 @@ def get_remote_b2g_pids():
     child_pids = []
     for line in procs:
         if re.search(r'/b2g\s*$', line):
-            if master_pid:
-                raise Exception('Two copies of b2g process found?')
-            master_pid = int(line.split()[1])
-        if re.search(r'/plugin-container\s*$', line):
+            pid = int(line.split()[1])
+            if shell('adb shell cat /proc/%u/comm' % pid).rstrip() == 'b2g':
+                if master_pid:
+                    raise Exception('Two copies of b2g process found?')
+                master_pid = pid
+            else:
+                child_pids.append(pid)
+        elif re.search(r'/plugin-container\s*$', line):
             child_pids.append(int(line.split()[1]))
 
     if not master_pid:
