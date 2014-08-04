@@ -933,6 +933,13 @@ class FlashFotaBuilder(object):
         self.generator.script.append(cmd)
         self.generator.Print("Device is compatible")
 
+    def Umount(self, mount_point):
+        """
+           Unmounting a mount point. We cannot do it against a device directly.
+        """
+        self.generator.Print("Unmounting %s" % (mount_point))
+        self.generator.script.append(('unmount("%s");' % (mount_point)))
+
     def Format(self):
         """
            Edify wrapper to add format() statements.
@@ -967,8 +974,9 @@ class FlashFotaBuilder(object):
                 'size': partition.fs_size,
                 'mount_point': mount_point
             }
-            self.generator.Print("Formatting: %(device)s " \
-                "(%(partition_type)s/%(fs_type)s)" % parameters)
+            self.generator.Print("Using %(device)s" % parameters)
+            self.Umount(mount_point)
+            self.generator.Print("Formatting as %(fs_type)s" % parameters)
             self.generator.AppendExtra(format_statement % parameters)
         self.generator.Print("All partitions formatted.")
 
