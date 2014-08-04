@@ -50,6 +50,8 @@ def build_flash_fota(args):
     builder.fota_check_gonk_version = args.fota_check_gonk_version
     builder.system_dir = args.system_dir
 
+    builder.sdk_version = args.sdk_version
+
     builder.build_flash_fota(args.system_dir, public_key, private_key,
                              output_zip, update_bin)
     print "FOTA Flash ZIP generated: %s" % output_zip
@@ -108,6 +110,10 @@ def main():
     parser.add_argument("-u", "--update-bin", dest="update_bin",
         required=False, default=None,
         help="Specify update-binary to be used in update.zip.")
+
+    parser.add_argument("-s", "--sdk-version", dest="sdk_version",
+        required=True, default=-1, type=int,
+        help="Specify the target SDK version when producing update.zip.")
 
     parser.add_argument("-o", "--output", dest="output", metavar="ZIP",
         help="Output to ZIP. Default: flash.zip", default=None)
