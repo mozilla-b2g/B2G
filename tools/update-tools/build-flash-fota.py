@@ -112,8 +112,8 @@ def main():
         help="Specify update-binary to be used in update.zip.")
 
     parser.add_argument("-s", "--sdk-version", dest="sdk_version",
-        required=True, default=-1, type=int,
-        help="Specify the target SDK version when producing update.zip.")
+        required=False, default=15, type=int,
+        help="Specify the target SDK version (defaulting to SDK 15, ICS) when producing update.zip.")
 
     parser.add_argument("-o", "--output", dest="output", metavar="ZIP",
         help="Output to ZIP. Default: flash.zip", default=None)
