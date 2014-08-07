@@ -123,17 +123,21 @@ def get_remote_b2g_pids():
     procs = remote_toolbox_cmd('ps').split('\n')
     master_pid = None
     child_pids = []
+    b2g_pids = {}
     for line in procs:
-        if re.search(r'/b2g\s*$', line):
-            pid = int(line.split()[1])
-            if shell('adb shell cat /proc/%u/comm' % pid).rstrip() == 'b2g':
-                if master_pid:
-                    raise Exception('Two copies of b2g process found?')
-                master_pid = pid
-            else:
-                child_pids.append(pid)
-        elif re.search(r'/plugin-container\s*$', line):
-            child_pids.append(int(line.split()[1]))
+        if re.search(r'/b2g|plugin-container\s*$', line):
+            pids = line.split()[1:3]
+            pid = int(pids[0])
+            ppid = int(pids[1])
+            b2g_pids[pid] = ppid
+    for pid in b2g_pids:
+        ppid = b2g_pids[pid]
+        if ppid in b2g_pids:
+            child_pids.append(pid)
+        else:
+            if master_pid:
+                raise Exception('Two copies of b2g process found?')
+            master_pid = pid
 
     if not master_pid:
         raise Exception('b2g does not appear to be running on the device.')
