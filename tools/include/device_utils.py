@@ -85,6 +85,11 @@ def shell(cmd, cwd=None, show_errors=True):
     return out
 
 
+def get_archive_path(out_dir, extension='.tar.bz2'):
+    """Gets the full path for an archive that would contain the given out_dir"""
+    return out_dir.rstrip(os.path.sep) + extension
+
+
 def create_specific_output_dir(out_dir):
     """Create the given directory if it doesn't exist.
 
@@ -107,8 +112,9 @@ def create_new_output_dir(out_dir_prefix):
     for i in range(0, 1024):
         try:
             dir = '%s%d' % (out_dir_prefix, i)
-            os.mkdir(dir)
-            return dir
+            if not os.path.isfile(get_archive_path(dir)):
+                os.mkdir(dir)
+                return dir
         except:
             pass
     raise Exception("Couldn't create output directory.")

@@ -21,26 +21,29 @@ import sys
 import re
 import argparse
 import textwrap
-import subprocess
+import gzip
+from multiprocessing import Pool
 
 import include.device_utils as utils
 
+
+def gzip_compress(to_compress):
+    with open(to_compress, mode='rb') as f_in:
+        with gzip.open(to_compress + '.gz', mode='wb') as f_out:
+            f_out.writelines(f_in)
+
+    os.remove(to_compress)
+
+
 def compress_logs(log_filenames, out_dir):
     print('Compressing logs...')
-
-    # Compress with xz if we can; otherwise, use gzip.
-    try:
-        utils.shell('xz -V', show_errors=False)
-        compression_prog='xz'
-    except subprocess.CalledProcessError:
-        compression_prog='gzip'
 
     # Compress in parallel.  While we're at it, we also strip off the
     # long identifier from the filenames, if we can.  (The filename is
     # something like gc-log.PID.IDENTIFIER.log, where the identifier is
     # something like the number of seconds since the epoch when the log was
     # triggered.)
-    compression_procs = []
+    to_compress = []
     for f in log_filenames:
         # Rename the log file if we can.
         match = re.match(r'^([a-zA-Z-]+\.[0-9]+)\.[0-9]+.log$', f)
@@ -51,17 +54,12 @@ def compress_logs(log_filenames, out_dir):
                           os.path.join(out_dir, new_name))
                 f = new_name
 
-        # Start compressing.
-        compression_procs.append((f, subprocess.Popen([compression_prog, f],
-                                                      cwd=out_dir)))
-    # Wait for all the compression processes to finish.
-    for (filename, proc) in compression_procs:
-        proc.wait()
-        if proc.returncode:
-            print('Compression of %s failed!' % filename, file=sys.stderr)
-            raise subprocess.CalledProcessError(proc.returncode,
-                                                [compression_prog, filename],
-                                                None)
+        to_compress.append(os.path.join(out_dir, f))
+
+    # Start compressing.
+    pool = Pool()
+    pool.map(gzip_compress, to_compress)
+
 
 def get_logs(args, out_dir=None, get_procrank_etc=True):
     if not out_dir:
@@ -85,7 +83,8 @@ def get_logs(args, out_dir=None, get_procrank_etc=True):
         if get_procrank_etc:
             utils.pull_procrank_etc(out_dir)
 
-        compress_logs(log_filenames, out_dir)
+        if args.compress_gc_cc_logs:
+            compress_logs(log_filenames, out_dir)
 
     utils.run_and_delete_dir_on_exception(do_work, out_dir)
 
@@ -113,6 +112,10 @@ if __name__ == '__main__':
             An abbreviated log doesn't trace through objects that the cycle
             collector knows must be reachable (e.g. DOM nodes whose window is
             alive).'''))
+
+    parser.add_argument('--uncompressed', dest='compress_gc_cc_logs',
+        action='store_false', default=True,
+        help='Do not compress the individual logs.')
 
     args = parser.parse_args()
     get_logs(args)
