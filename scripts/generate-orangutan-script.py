@@ -41,8 +41,8 @@ def main():
     # Filed a followup bug (838267) for better key support.
     maxY = 520
   elif device == 'flame':
-    maxX = 854
-    maxY = 480
+    maxX = 480
+    maxY = 854
   else:
     maxX = 320
     maxY = 520
