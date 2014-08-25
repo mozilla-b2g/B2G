@@ -151,6 +151,10 @@ def get_remote_b2g_pids():
     return (master_pid, child_pids)
 
 
+def is_using_nuwa():
+    """Determines if Nuwa is being used"""
+    return "(Nuwa)" in remote_shell('b2g-ps', False)
+
 def pull_procrank_etc(out_dir):
     """Get the output of procrank and a few other diagnostic programs and save
     it into out_dir.
@@ -193,7 +197,7 @@ def notify_and_pull_files(outfiles_prefixes,
                           optional_outfiles_prefixes=[],
                           fifo_msg=None,
                           signal=None,
-                          ignore_nuwa=os.getenv("MOZ_IGNORE_NUWA_PROCESS")):
+                          ignore_nuwa=is_using_nuwa()):
     """Send a message to the main B2G process (either by sending it a signal or
     by writing to a fifo that it monitors) and pull files created as a result.
 
@@ -230,6 +234,10 @@ def notify_and_pull_files(outfiles_prefixes,
     if (fifo_msg is None) == (signal is None):
         raise ValueError("Exactly one of the fifo_msg and "
                          "signal kw args must be non-null.")
+
+    # Check if we should override the ignore_nuwa value.
+    if not ignore_nuwa and os.getenv("MOZ_IGNORE_NUWA_PROCESS", "0") != "0":
+        ignore_nuwa = True
 
     unified_outfiles_prefixes = ['unified-' + pfx for pfx in outfiles_prefixes]
     all_outfiles_prefixes = outfiles_prefixes + optional_outfiles_prefixes \
