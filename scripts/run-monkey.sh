@@ -6,7 +6,7 @@ echo "Look at https://github.com/gregorwagner/gaia/tree/monkey"
 
 SCRIPT_NAME=orangutan-script
 ORNG_PATH=/data
-SCRIPT_PATH=/mnt/sdcard
+SCRIPT_PATH=/data/local
 ADB=${ADB:-adb}
 orangutan="$ORNG_PATH/orng"
 ifstmt="test -x $orangutan && echo '1'"
