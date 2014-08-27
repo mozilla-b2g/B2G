@@ -83,10 +83,37 @@ def get_proc_names(out_dir):
     return proc_names, procrank
 
 
+def get_objdir_and_product(args):
+    """Attempts to figure out the objdir and device name using the load-config.sh script"""
+    if args.gecko_objdir and args.product:
+        # User already specified objdir and product.
+        return
+
+    load_config_script = os.path.join(os.path.dirname(__file__), '../load-config.sh')
+    try:
+        # Run load-config.sh in a bash shell and spit out the config vars we
+        # care about as a comma separated list when exiting.
+        variables = subprocess.Popen(
+            ["bash", "-c",
+             "trap 'echo -n \"${GECKO_OBJDIR}\",\"${DEVICE_NAME}\"' exit; source \"$1\" > /dev/null 2>&1",
+             "_", load_config_script],
+            shell=False, stdout=subprocess.PIPE).communicate()[0].split(',')
+
+        if not args.gecko_objdir and variables[0]:
+            args.gecko_objdir = variables[0]
+
+        if not args.product and variables[1]:
+            args.product = variables[1]
+
+    except Exception as e:
+        pass
+
+
 def process_dmd_files_impl(dmd_files, args):
     out_dir = os.path.dirname(dmd_files[0])
 
     proc_names, procrank = get_proc_names(out_dir)
+    get_objdir_and_product(args)
 
     for f in dmd_files:
         # Extract the PID (e.g. 111) and UNIX time (e.g. 9999999) from the name
