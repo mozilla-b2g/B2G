@@ -11,6 +11,7 @@ abi/
 backup-*/
 bionic/
 bootable/
+brcm_usrlib/
 build/
 dalvik/
 development/
