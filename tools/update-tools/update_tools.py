@@ -19,6 +19,7 @@ from cStringIO import StringIO
 import datetime
 import hashlib
 import os
+import glob
 import platform
 import re
 import shutil
@@ -32,10 +33,6 @@ import zipfile
 this_dir = os.path.abspath(os.path.dirname(__file__))
 b2g_dir = os.path.dirname(os.path.dirname(this_dir))
 bin_dir = os.path.join(this_dir, "bin")
-b2g_libs = [
-    "libfreebl3.so", "libmozglue.so", "libnss3.so",
-    "libnssckbi.so", "libsoftokn3.so", "libxul.so"
-]
 
 def validate_env(parser):
     if platform.system() not in ("Linux", "Darwin"):
@@ -840,6 +837,14 @@ class FlashFotaBuilder(object):
             self.import_releasetools()
         self.generator = edify_generator.EdifyGenerator(1, {"fstab": self.fstab})
 
+    def GetFilesType(self, directory):
+        """
+        Compute file mime type for a directory
+        """
+        cmd = ['file', '--mime-type' ] + glob.glob(os.path.join(directory, '*'))
+        result = subprocess.check_output(cmd).split('\n')
+        return result
+
     def AssertMountIfNeeded(self, mount_point):
         """
            AssertMount the partition with the given mount_point
@@ -878,7 +883,7 @@ class FlashFotaBuilder(object):
         for line in result.splitlines():
             if line.find("(NEEDED)") > 0:
                 match = so_re.match(line)
-                if match and not (match.group(1) + ".so" in b2g_libs):
+                if match and not (match.group(1) + ".so" in self.b2g_libs):
                     # print "Adding dep against", match.group(1), "for", path
                     dependencies.append(match.group(1) + ".so")
         return dependencies
@@ -887,9 +892,8 @@ class FlashFotaBuilder(object):
         """
            Build a list of file/sha1 values
         """
-        b2g_dir = os.path.join(self.system_dir, "b2g")
-        b2g_bins = b2g_libs + [ "b2g", "plugin-container", "updater" ]
-        b2g_exec_files = map(lambda x: os.path.join(b2g_dir, x), b2g_bins)
+        b2g_bins = self.b2g_libs + self.b2g_exec
+        b2g_exec_files = map(lambda x: os.path.join(self.out_b2g_dir, x), b2g_bins)
 
         deps_list = []
         for p in b2g_exec_files:
@@ -1001,6 +1005,14 @@ class FlashFotaBuilder(object):
     def build_flash_fota(self, system_dir, public_key, private_key, output_zip, update_bin):
         fd, unsigned_zip = tempfile.mkstemp()
         os.close(fd)
+
+        def custom_filter(target, files):
+          return map(lambda x: os.path.basename(x.split(':')[0]), filter(lambda x: x.find(target) > 0, files))
+
+        self.out_b2g_dir = os.path.join(self.system_dir, "b2g")
+        files = self.GetFilesType(self.out_b2g_dir)
+        self.b2g_libs = custom_filter('x-sharedlib', files)
+        self.b2g_exec = custom_filter('x-executable', files)
 
         with FotaZip(unsigned_zip, "w") as flash_zip:
             flash_zip.write_recursive(system_dir, "system", filter=self.zip_filter)
