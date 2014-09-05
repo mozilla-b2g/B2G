@@ -179,6 +179,11 @@ case "$1" in
 	repo_sync $1
 	;;
 
+"rpi")
+	echo PRODUCT_NAME=rpi >> .tmp-config &&
+	repo_sync $1
+	;;
+
 *)
 	echo "Usage: $0 [-cdflnq] (device name)"
 	echo "Flags are passed through to |./repo sync|."
@@ -210,6 +215,7 @@ case "$1" in
 	echo - flatfish
 	echo - flame
 	echo - flame-kk
+	echo - rpi "(Revision B)"
 	echo - emulator
 	echo - emulator-jb
 	echo - emulator-kk
