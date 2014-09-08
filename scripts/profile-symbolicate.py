@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-import argparse, bisect, json, os, subprocess, sys
+import argparse, bisect, json, os, subprocess, sys, os.path
 
 gSpecialLibs = {
     # The [vectors] is a special section used for functions which can really
@@ -21,7 +21,7 @@ gSpecialLibs = {
 ###############################################################################
 
 class Library:
-  def __init__(self, lib_dict, verbose=False):
+  def __init__(self, lib_dict, verbose=False, bp_symbols_path=None):
     """lib_dict will be the JSON dictionary from the profile"""
     self.start = lib_dict["start"]
     self.end = lib_dict["end"]
@@ -33,6 +33,7 @@ class Library:
     self.symbols = {}
     self.symbol_table = None
     self.symbol_table_addresses = None
+    self.bp_symbols_path = bp_symbols_path
 
   def AddressToSymbol(self, address_str):
     """Attempts to convert an address into a symbol."""
@@ -47,6 +48,9 @@ class Library:
     if not self.host_name:
       unknown = "Unknown (in " + self.target_name + ")"
       return [unknown for i in range(len(addresses_strs))]
+    syms = self.LookupAddressesInBreakpad(addresses_strs)
+    if syms is not None:
+      return syms
     if "TARGET_TOOLS_PREFIX" in os.environ:
       target_tools_prefix = os.environ["TARGET_TOOLS_PREFIX"]
     else:
@@ -127,8 +131,12 @@ class Library:
       else:
         gecko_objdir = "objdir-gecko"
       if not os.path.isdir(gecko_objdir):
-        print(gecko_objdir, "isn't a directory");
-        sys.exit(1)
+        if self.bp_symbols_path is None:
+          print(gecko_objdir, "isn't a directory");
+          sys.exit(1)
+        self.host_name = os.path.basename(self.target_name)
+        self.located = True
+        return
       lib_name = self.FindLibInTree(basename, gecko_objdir, exclude_dir="dist")
       if not lib_name:
         # Probably an android library
@@ -186,6 +194,32 @@ class Library:
       syms.append(self.LookupAddressInSymbolTable(address))
     return syms
 
+  def LookupAddressesInBreakpad(self, addresses):
+    if not self.bp_symbols_path:
+      return None
+
+    if "GECKO_PATH" in os.environ:
+      gecko_src_path = os.environ["GECKO_PATH"]
+    else:
+      gecko_src_path = "gecko"
+    sys.path.append(os.path.join(gecko_src_path, "tools", "rb"))
+    from fix_stack_using_bpsyms import fixSymbols
+
+    def fixSymbol(address):
+      addr = ((int(address, 0) - self.start + self.offset) & ~1) - 1
+      # the 'x' in '0x' must be lower case, all others must be upper case
+      addr_str =  "0x{:X}".format(addr)
+      libname = os.path.basename(self.host_name)
+      line = "[" + libname + " +" + addr_str + "]"
+      symbol = fixSymbols(line, self.bp_symbols_path)
+      if symbol == line:
+        return "??"
+      if symbol[-1] == "\n":
+        symbol = symbol[:-1]
+      return symbol.split()[0] + " (in " + self.target_name + ")"
+
+    return map(lambda address: fixSymbol(address), addresses)
+
   def ResolveSymbols(self, progress=False):
     """Tries to convert all of the symbols into symbolic equivalents."""
     if len(self.symbols) == 0:
@@ -206,10 +240,11 @@ class Library:
 ###############################################################################
 
 class Libraries:
-  def __init__(self, profile, verbose=False):
+  def __init__(self, profile, verbose=False, bp_symbols_path=None):
     lib_dicts = json.loads(profile["libs"])
     lib_dicts = sorted(lib_dicts, key=lambda lib: lib["start"])
-    self.libs = [Library(lib_dict, verbose=verbose) for lib_dict in lib_dicts]
+    self.libs = [Library(lib_dict, verbose=verbose,
+      bp_symbols_path=bp_symbols_path) for lib_dict in lib_dicts]
     # Create a sorted list of just the start addresses so that we can use
     # bisect to lookup addresses
     self.libs_start = [lib.start for lib in self.libs]
@@ -290,34 +325,41 @@ def main():
   parser.add_argument("-l", "--lookup", help="lookup a single address")
   parser.add_argument("-o", "--output", help="specify the name of the output file")
   parser.add_argument("-v", "--verbose", help="increase output verbosity", action="store_true")
+  parser.add_argument("-s", "--symbols-path", metavar="symbols path", help="Path to symbols directory")
   args = parser.parse_args(sys.argv[1:])
   verbose = args.verbose
   progress = not args.no_progress
 
-  if "GECKO_OBJDIR" not in os.environ:
-    print "'GECKO_OBJDIR' needs to be defined in the environment"
-    sys.exit(1)
+  if not args.symbols_path:
+    if "GECKO_OBJDIR" not in os.environ:
+      print "'GECKO_OBJDIR' needs to be defined in the environment"
+      sys.exit(1)
 
-  if "TARGET_TOOLS_PREFIX" not in os.environ:
-    print "'TARGET_TOOLS_PREFIX' needs to be defined in the environment"
-    sys.exit(1)
+    if "TARGET_TOOLS_PREFIX" not in os.environ:
+      print "'TARGET_TOOLS_PREFIX' needs to be defined in the environment"
+      sys.exit(1)
 
-  if "PRODUCT_OUT" not in os.environ:
-    print "'PRODUCT_OUT' needs to be defined in the environment"
-    sys.exit(1)
+    if "PRODUCT_OUT" not in os.environ:
+      print "'PRODUCT_OUT' needs to be defined in the environment"
+      sys.exit(1)
+
+  def print_var(var):
+    if var in os.environ:
+      print var + " = '" + os.environ[var] + "'"
+
 
   if verbose:
     print "Filename =", args.filename
-    print "GECKO_OBJDIR = '" + os.environ["GECKO_OBJDIR"] + "'"
-    print "TARGET_TOOLS_PREFIX = '" + os.environ["TARGET_TOOLS_PREFIX"] + "'"
-    print "PRODUCT_OUT = '" + os.environ["PRODUCT_OUT"] + "'"
+    print_var("GECKO_OBJDIR")
+    print_var("TARGET_TOOLS_PREFIX")
+    print_var("PRODUCT_OUT")
 
   # Read in the JSON file created by the profiler.
   if progress:
     print "Reading profiler file", args.filename, "..."
   profile = json.load(open(args.filename, "rb"))
 
-  libs = Libraries(profile, verbose)
+  libs = Libraries(profile, verbose, args.symbols_path)
   if args.dump_libs:
     libs.Dump()
 
