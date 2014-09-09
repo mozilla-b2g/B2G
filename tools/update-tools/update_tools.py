@@ -1050,8 +1050,7 @@ class FlashFotaBuilder(object):
         if self.fota_type == 'partial':
             for d in self.fota_dirs:
                 self.generator.Print("Cleaning " + d)
-                cmd = ('delete_recursive("%s");' % ("/"+d))
-                self.generator.script.append(self.generator._WordWrap(cmd))
+                self.generator.DeleteFilesRecursive(["/"+d])
 
             cmd = ('if greater_than_int(run_program("/system/bin/mv", "/system/b2g.bak", "/system/b2g"), 0) then')
             self.generator.script.append(self.generator._WordWrap(cmd))
@@ -1064,8 +1063,7 @@ class FlashFotaBuilder(object):
         self.generator.DeleteFiles(["/system/b2g/libdmd.so"])
 
         self.generator.Print("Remove stale update")
-        cmd = ('delete_recursive("/system/b2g/updated");')
-        self.generator.script.append(self.generator._WordWrap(cmd))
+        self.generator.DeleteFilesRecursive(["/system/b2g/updated"])
 
         self.generator.Print("Extracting files to /system")
         self.generator.UnpackPackageDir("system", "/system")
