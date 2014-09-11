@@ -1,21 +1,9 @@
 #!/usr/bin/env python
 
-"""Prettifies stacks retrieved from a B2G device.
+"""This script uses addr2line (part of binutils) to post-process the entries
+produced by NS_FormatCodeAddress().
 
-This program takes as input a stream or a file containing stack frames
-formatted like
-
-    malloc[libmozglue.so +0x42A6] 0x4009c2a6
-
-and converts frames into human-readable versions, such as
-
-    malloc memory/build/replace_malloc.c:152 (libmozglue.so+0x42a6).
-
-The stack frames don't need to be on their own line; fix_b2g_stack will replace
-them wherever they appear, and is happy to replace multiple stack frames per
-line.
-
-This is an analog to fix-linux-stack.pl and is functionally similar to
+This is an analog to fix_linux_stack.py and is functionally similar to
 $B2G_ROOT/scripts/profile-symbolicate.py.
 
 """
@@ -365,17 +353,17 @@ class StackFixer(object):
         self._cache = StackFixerCache(options)
         self._options = options
 
-    def translate(self, lib, offset, pc=None, fn_guess=None):
+    def translate(self, fn_guess, lib, offset):
         """Translate the given offset (an integer) into the given library (e.g.
         'libxul.so') into a human-readable string and return that string.
 
-        pc and fn_guess are hints to make the output look nicer; we don't use
-        either of these optional parameters to look up lib+offsets.
+        fn_guess is a hint to make the output look nicer; we don't use
+        it to look up lib+offsets.
 
         """
         lib_path = self._find_lib(lib)
         return self._cache.get_maybe_set(lib_path, offset,
-            lambda: self._addr2line(lib, offset, pc, fn_guess))
+            lambda: self._addr2line(lib, offset, fn_guess))
 
     def close(self):
         self._cache.flush()
@@ -433,11 +421,8 @@ class StackFixer(object):
         finally:
             proc.kill()
 
-    def _addr2line(self, lib, offset, pc, fn_guess):
+    def _addr2line(self, lib, offset, fn_guess):
         """Use addr2line to translate the given lib+offset.
-
-        We use pc only for aesthetic purposes; it's not passed to addr2line or
-        anything.
 
         If addr2line can't resolve a lib+offset, you may still have a guess as
         to what function lives there.  (For example, NS_StackWalk is sometimes
@@ -446,8 +431,7 @@ class StackFixer(object):
 
         """
         def addr_str():
-            _pc = ('0x%x ' % pc) if pc != None else ''
-            return '(%s%s+0x%x)' % (_pc, lib, offset)
+            return '(%s+0x%x)' % (lib, offset)
 
         def fallback_str():
             _fn_guess = fn_guess + ' ' if fn_guess and fn_guess != '???' else ''
@@ -482,6 +466,39 @@ class StackFixer(object):
             return '%s (addr2line exception)' % fallback_str()
 
 
+# Matches lines produced by DMD before bug 1062709 landed.
+old_line_re = re.compile(
+    r'''(\s+)                   # leading whitespace
+        ([^ ][^\]]*)            # either '???' or mangled fn signature
+        \[
+          (\S+)                 # library name
+          \s+
+          \+(0x[0-9a-fA-F]+)    # offset into lib
+        \]
+        (\s+0x[0-9a-fA-F]+.*)      # program counter and anything else
+        ''',
+    re.VERBOSE)
+
+# Matches lines produced by DMD (via NS_FormatCodeAddress()) after bug 1062709
+# landed.
+line_re = re.compile("^(.*#\d+: )(.+)\[(.+) \+(0x.+)\](.*)$")
+
+def fixSymbols(line, fixer):
+    # Try parsing it as if it's the new stack frame format.
+    result = line_re.match(line)
+    if result is not None:
+        (before, fn, lib, offset, after) = result.groups()
+        return before + fixer.translate(fn, lib, int(offset, 16)) + after + '\n'
+
+    # Try parsing it as if it's the old stack frame format.
+    result = old_line_re.match(line)
+    if result is not None:
+        (before, fn, lib, offset, after) = result.groups()
+        return before + fixer.translate(fn, lib, int(offset, 16)) + after + '\n'
+
+    return line
+
+
 def fix_b2g_stacks_in_file(infile, outfile, args={}, **kwargs):
     """Read lines from infile and output those lines to outfile with their
     stack frames rewritten.
@@ -504,25 +521,7 @@ def fix_b2g_stacks_in_file(infile, outfile, args={}, **kwargs):
         except Exception:
             pass
 
-    matcher = re.compile(
-        r'''(?P<fn>[^ ][^\]]*)              # either '???' or mangled fn signature
-            \[
-              (?P<lib>\S+)                  # library name
-              \s+
-              \+(?P<offset>0x[0-9a-fA-F]+)  # offset into lib
-            \]
-            \s+
-            (?P<pc>0x[0-9a-fA-F]+)          # program counter
-            ''',
-        re.VERBOSE)
-
     fixer = StackFixer(options)
-
-    def subfn(match):
-        return fixer.translate(match.group('lib'),
-                               int(match.group('offset'), 16),
-                               int(match.group('pc'), 16),
-                               match.group('fn'))
 
     # Filter our output through c++filt.  Pumping on a separate thread is
     # *much* faster than filtering line-by-line.
@@ -536,7 +535,7 @@ def fix_b2g_stacks_in_file(infile, outfile, args={}, **kwargs):
     try:
         p = pump(outfile, cppfilt.stdout)
         for line in infile:
-            cppfilt.stdin.write(matcher.sub(subfn, line))
+            cppfilt.stdin.write(fixSymbols(line, fixer))
     finally:
         cppfilt.stdin.close()
     p.join()
