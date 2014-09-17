@@ -330,6 +330,17 @@ while [ $# -gt 0 ]; do
 done
 
 case "$PROJECT" in
+"shallow")
+	run_adb shell stop b2g &&
+	run_adb remount &&
+	flash_gecko &&
+	flash_gaia &&
+	update_time &&
+	echo Restarting B2G &&
+	run_adb shell start b2g
+	exit $?
+	;;
+
 "gecko")
 	run_adb shell stop b2g &&
 	run_adb remount &&
