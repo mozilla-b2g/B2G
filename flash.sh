@@ -1,6 +1,7 @@
 #!/bin/bash
 
 . load-config.sh
+test -f $DEVICE_DIR/flash.sh && . $DEVICE_DIR/flash.sh
 
 ADB=${ADB:-adb}
 FASTBOOT=${FASTBOOT:-fastboot}
