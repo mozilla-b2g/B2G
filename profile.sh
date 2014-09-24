@@ -263,12 +263,7 @@ cmd_capture() {
     case $opt in
       s)
         echo "Symbols: $OPTARG"
-        if [ -d "$OPTARG" ]; then
-          BP_SYMBOLS="-s $OPTARG"
-        else
-            echo "Path \"$OPTARG\" is not a directory" >&2
-            exit 1
-        fi
+        BP_SYMBOLS="-s $OPTARG"
         ;;
       v)
         video=1

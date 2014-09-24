@@ -1,6 +1,7 @@
 #!/usr/bin/python
 
-import argparse, bisect, json, os, subprocess, sys, os.path
+import argparse, bisect, json, os, subprocess, sys
+import os.path, re, requests
 
 gSpecialLibs = {
     # The [vectors] is a special section used for functions which can really
@@ -14,6 +15,15 @@ gSpecialLibs = {
     }
 }
 
+url_matcher = re.compile("^(https?:\/\/)(([0-9\da-z\.-]+)\.)?([0-9a-z\.]{2,6})([\/\w \.-]*)*(:[0-9]+)?\/?$")
+
+def fixupAddress(lib, address):
+  lib_address = int(address, 0) - lib.start + lib.offset
+  return (lib_address & ~1) - 1
+
+def formatAddress(address):
+  return "0x{:X}".format(address)
+
 ###############################################################################
 #
 # Library class. There is an instance of this for each library in the profile.
@@ -21,19 +31,20 @@ gSpecialLibs = {
 ###############################################################################
 
 class Library:
-  def __init__(self, lib_dict, verbose=False, bp_symbols_path=None):
+  def __init__(self, lib_dict, verbose=False, symbols_path=None):
     """lib_dict will be the JSON dictionary from the profile"""
     self.start = lib_dict["start"]
     self.end = lib_dict["end"]
     self.offset = lib_dict["offset"]
     self.target_name = lib_dict["name"]
+    self.id = lib_dict["breakpadId"]
     self.verbose = verbose
     self.host_name = None
     self.located = False
     self.symbols = {}
     self.symbol_table = None
     self.symbol_table_addresses = None
-    self.bp_symbols_path = bp_symbols_path
+    self.symbols_path = symbols_path
 
   def AddressToSymbol(self, address_str):
     """Attempts to convert an address into a symbol."""
@@ -131,7 +142,7 @@ class Library:
       else:
         gecko_objdir = "objdir-gecko"
       if not os.path.isdir(gecko_objdir):
-        if self.bp_symbols_path is None:
+        if self.symbols_path is None:
           print(gecko_objdir, "isn't a directory");
           sys.exit(1)
         self.host_name = os.path.basename(self.target_name)
@@ -195,7 +206,7 @@ class Library:
     return syms
 
   def LookupAddressesInBreakpad(self, addresses):
-    if not self.bp_symbols_path:
+    if not self.symbols_path:
       return None
 
     if "GECKO_PATH" in os.environ:
@@ -206,12 +217,12 @@ class Library:
     from fix_stack_using_bpsyms import fixSymbols
 
     def fixSymbol(address):
-      addr = ((int(address, 0) - self.start + self.offset) & ~1) - 1
+      addr = fixupAddress(self, address)
       # the 'x' in '0x' must be lower case, all others must be upper case
-      addr_str =  "0x{:X}".format(addr)
+      addr_str =  formatAddress(addr)
       libname = os.path.basename(self.host_name)
       line = "[" + libname + " +" + addr_str + "]"
-      symbol = fixSymbols(line, self.bp_symbols_path)
+      symbol = fixSymbols(line, self.symbols_path)
       if symbol == line:
         return "??"
       if symbol[-1] == "\n":
@@ -240,16 +251,17 @@ class Library:
 ###############################################################################
 
 class Libraries:
-  def __init__(self, profile, verbose=False, bp_symbols_path=None):
+  def __init__(self, profile, verbose=False, symbols_path=None):
     lib_dicts = json.loads(profile["libs"])
     lib_dicts = sorted(lib_dicts, key=lambda lib: lib["start"])
     self.libs = [Library(lib_dict, verbose=verbose,
-      bp_symbols_path=bp_symbols_path) for lib_dict in lib_dicts]
+      symbols_path=symbols_path) for lib_dict in lib_dicts]
     # Create a sorted list of just the start addresses so that we can use
     # bisect to lookup addresses
     self.libs_start = [lib.start for lib in self.libs]
     self.profile = profile
     self.last_lib = None
+    self.symbols_path = symbols_path
 
   def Dump(self):
     """Dumps out some information about all of the libraries that we're tracking."""
@@ -279,8 +291,55 @@ class Libraries:
 
   def ResolveSymbols(self, progress=True):
     """Tries to convert all of the symbols into symbolic equivalents."""
+    if not self.symbols_path or url_matcher.match(self.symbols_path) is None:
+      for lib in self.libs:
+        lib.ResolveSymbols(progress=progress)
+      return
+
+    # We were given a url address as the symbols path,
+    # it must be a symbolapi server address
+    addresses = []
+    memory_map = []
+    libs = []
+    index = 0
+    address_map = {}
+
     for lib in self.libs:
-      lib.ResolveSymbols(progress=progress)
+      # skip fake binaries
+      if not lib.target_name.startswith("["):
+        libname = os.path.basename(lib.target_name)
+        memory_map.append((libname, lib.id))
+        libs.append(lib)
+        for address in lib.symbols.keys():
+            adj_address = fixupAddress(lib, address)
+            address_map[adj_address] = address
+            addresses.append((index, adj_address))
+        index += 1
+
+    symbolication_request = {
+      "stacks": [addresses],
+      "memoryMap": memory_map,
+      "version": 3,
+      "symbolSources": ["B2G", "Firefox"]
+    }
+
+    request = json.dumps(symbolication_request)
+
+    headers = {
+      "Content-Type": "application/json",
+      "Content-Length": len(request),
+      "Connection": "close"
+    }
+
+    r = requests.post(self.symbols_path, data=request, headers=headers)
+    if r.status_code != 200:
+      raise Exception("Bad request: " + str(r.status_code))
+
+    for sym, address in zip(r.json()[0], addresses):
+      index = address[0]
+      lib = libs[index]
+      original_address = address_map[address[1]]
+      lib.symbols[original_address] = sym
 
   def ScanLocations(self, progress=False):
     """Scans through the locations and builds a set of unresolved addresses for each library."""
