@@ -16,6 +16,7 @@ gSpecialLibs = {
 }
 
 url_matcher = re.compile("^(https?:\/\/)(([0-9\da-z\.-]+)\.)?([0-9a-z\.]{2,6})([\/\w \.-]*)*(:[0-9]+)?\/?$")
+symbol_path_matcher = re.compile(r"^(.+) \[(.*)]$")
 
 def fixupAddress(lib, address):
   lib_address = int(address, 0) - lib.start + lib.offset
@@ -227,7 +228,17 @@ class Library:
         return "??"
       if symbol[-1] == "\n":
         symbol = symbol[:-1]
-      return symbol.split()[0] + " (in " + self.target_name + ")"
+      # Absolute source path ends up in a long string,
+      # take only the source file with line number.
+      # When the symbol is resolved with source path,
+      # the symbol format is:
+      #   <function-name> [<source-path>:<line>]
+      match = symbol_path_matcher.match(symbol)
+      if match:
+        symbol, source_path = match.group(1, 2)
+        source_file = os.path.basename(source_path)
+        symbol += " @ " + source_file
+      return symbol + " (in " + self.target_name + ")"
 
     return map(lambda address: fixSymbol(address), addresses)
 
