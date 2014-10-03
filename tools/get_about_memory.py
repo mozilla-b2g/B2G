@@ -116,19 +116,21 @@ def process_dmd_files_impl(dmd_files, args):
     get_objdir_and_product(args)
 
     for f in dmd_files:
-        # Extract the PID (e.g. 111) and UNIX time (e.g. 9999999) from the name
-        # of the dmd file (e.g. dmd-9999999-111.txt.gz).
+        # Extract the PID (e.g. 111) and UNIX time (e.g. 9999999) and the file
+        # kind ('txt' or 'json', depending on the version) from the name
+        # of the dmd file (e.g. dmd-9999999-111.json.gz).
         basename = os.path.basename(f)
-        dmd_filename_match = re.match(r'^dmd-(\d+)-(\d+).', basename)
+        dmd_filename_match = re.match(r'^dmd-(\d+)-(\d+).(txt|json)', basename)
         if dmd_filename_match:
             creation_time = datetime.fromtimestamp(int(dmd_filename_match.group(1)))
             pid = int(dmd_filename_match.group(2))
+            kind = dmd_filename_match.group(3)
             if pid in proc_names:
                 proc_name = proc_names[pid]
-                outfile_name = 'dmd-%s-%d.txt' % (proc_name, pid)
+                outfile_name = 'dmd-%s-%d.%s' % (proc_name, pid, kind)
             else:
                 proc_name = None
-                outfile_name = 'dmd-%d.txt' % pid
+                outfile_name = 'dmd-%d.%s' % (pid, kind)
         else:
             pid = None
             creation_time = None
