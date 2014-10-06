@@ -481,7 +481,7 @@ old_line_re = re.compile(
 
 # Matches lines produced by DMD (via NS_FormatCodeAddress()) after bug 1062709
 # landed.
-line_re = re.compile("^(.*#\d+: )(.+)\[(.+) \+(0x.+)\](.*)$")
+line_re = re.compile("^(.*#\d+: )(.+)\[(.+) \+(0x[0-9A-Fa-f]+)\](.*)$")
 
 def fixSymbols(line, fixer):
     # Try parsing it as if it's the new stack frame format.
