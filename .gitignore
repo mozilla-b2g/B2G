@@ -1,6 +1,6 @@
 .config
 .repo/
-.userconfig
+.userconfig*
 .var.profile
 *.swp
 *.pyc
@@ -16,8 +16,7 @@ build/
 dalvik/
 development/
 device/
-download-galaxy-nexus/
-download-nexus-s/
+download-*/
 external/
 frameworks/
 gaia/
@@ -26,6 +25,7 @@ gonk-misc/
 hardware/
 kernel/
 libcore/
+libnativehelper/
 librecovery/
 ndk/
 objdir-gecko*/
