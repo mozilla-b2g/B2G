@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 import argparse, bisect, json, os, subprocess, sys
 import os.path, re, requests
