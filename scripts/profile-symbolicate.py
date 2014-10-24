@@ -25,6 +25,15 @@ def fixupAddress(lib, address):
 def formatAddress(address):
   return "0x{:X}".format(address)
 
+def get_tools_prefix():
+  if "GECKO_TOOLS_PREFIX" in os.environ:
+    return os.environ["GECKO_TOOLS_PREFIX"]
+
+  if "TARGET_TOOLS_PREFIX" in os.environ:
+    return os.environ["TARGET_TOOLS_PREFIX"]
+
+  return None
+
 ###############################################################################
 #
 # Library class. There is an instance of this for each library in the profile.
@@ -63,9 +72,8 @@ class Library:
     syms = self.LookupAddressesInBreakpad(addresses_strs)
     if syms is not None:
       return syms
-    if "TARGET_TOOLS_PREFIX" in os.environ:
-      target_tools_prefix = os.environ["TARGET_TOOLS_PREFIX"]
-    else:
+    target_tools_prefix = get_tools_prefix()
+    if target_tools_prefix is None:
       target_tools_prefix = "arm-eabi-"
     args = [target_tools_prefix + "addr2line", "-C", "-f", "-e", self.host_name]
     nm_args = ["gecko/tools/profiler/nm-symbolicate.py", self.host_name]
@@ -405,8 +413,8 @@ def main():
       print "'GECKO_OBJDIR' needs to be defined in the environment"
       sys.exit(1)
 
-    if "TARGET_TOOLS_PREFIX" not in os.environ:
-      print "'TARGET_TOOLS_PREFIX' needs to be defined in the environment"
+    if get_tools_prefix() is None:
+      print "'{GECKO|TARGET}_TOOLS_PREFIX' needs to be defined in the environment"
       sys.exit(1)
 
     if "PRODUCT_OUT" not in os.environ:
@@ -421,7 +429,10 @@ def main():
   if verbose:
     print "Filename =", args.filename
     print_var("GECKO_OBJDIR")
-    print_var("TARGET_TOOLS_PREFIX")
+    if "GECKO_TOOLS_PREFIX" in os.environ:
+      print_var("GECKO_TOOLS_PREFIX")
+    else:
+      print_var("TARGET_TOOLS_PREFIX")
     print_var("PRODUCT_OUT")
 
   # Read in the JSON file created by the profiler.
