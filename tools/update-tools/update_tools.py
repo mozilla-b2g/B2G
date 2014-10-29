@@ -1024,6 +1024,16 @@ class FlashFotaBuilder(object):
         os.unlink(unsigned_zip)
 
     def build_flash_script(self):
+        if not hasattr(self.generator, 'DeleteFilesRecursive'):
+            # This if block is for backwards compatibility since
+            # mozilla-b2g/B2G is not tracked in sources.xml.
+            # TODO: Remove after bug 1048854 has been fixed.
+            def deprecated_DeleteFilesRecursive(objects):
+                for o in objects:
+                    cmd = ('delete_recursive("%s");' % (o))
+                    self.generator.script.append(self.generator._WordWrap(cmd))
+            self.generator.DeleteFilesRecursive = deprecated_DeleteFilesRecursive
+
         self.generator.Print("Starting B2G FOTA: " + self.fota_type)
 
         cmd = ('show_progress(1.0, 0);')
