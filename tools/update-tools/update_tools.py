@@ -937,6 +937,21 @@ class FlashFotaBuilder(object):
         self.generator.script.append(cmd)
         self.generator.Print("Device is compatible")
 
+    def CleanUpdateFiles(self):
+        """
+        Cleaning all the temporary files used for update
+        """
+
+        # delete_recursive() function in edify can handle files and
+        # directories.
+        staleUpdateFiles = [
+          os.path.join("/data", "local", "b2g-updates"),
+          os.path.join(self.fota_sdcard, "updates", "fota")
+        ]
+        self.generator.Print("Cleaning FOTA files")
+        self.generator.DeleteFilesRecursive(staleUpdateFiles)
+        self.generator.Print("FOTA files removed")
+
     def Umount(self, mount_point):
         """
            Unmounting a mount point. We cannot do it against a device directly.
@@ -1086,6 +1101,11 @@ class FlashFotaBuilder(object):
 
         self.generator.Print("Setting file permissions")
         self.build_permissions()
+
+        cmd = ('set_progress(0.9);')
+        self.generator.script.append(self.generator._WordWrap(cmd))
+        self.generator.Print("Cleaning update files")
+        self.CleanUpdateFiles()
 
         if self.fota_type == 'partial':
             cmd = ('else ui_print("Restoring previous stale update."); endif;')
