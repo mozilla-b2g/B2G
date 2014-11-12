@@ -15,7 +15,6 @@ gSpecialLibs = {
     }
 }
 
-url_matcher = re.compile("^(https?:\/\/)(([0-9\da-z\.-]+)\.)?([0-9a-z\.]{2,6})([\/\w \.-]*)*(:[0-9]+)?\/?$")
 symbol_path_matcher = re.compile(r"^(.+) \[(.*)]$")
 
 def fixupAddress(lib, address):
@@ -310,7 +309,7 @@ class Libraries:
 
   def ResolveSymbols(self, progress=True):
     """Tries to convert all of the symbols into symbolic equivalents."""
-    if not self.symbols_path or url_matcher.match(self.symbols_path) is None:
+    if not self.symbols_path or not self.symbols_path.startswith('http'):
       for lib in self.libs:
         lib.ResolveSymbols(progress=progress)
       return
