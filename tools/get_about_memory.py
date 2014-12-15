@@ -141,28 +141,6 @@ def process_dmd_files_impl(dmd_files, args):
         outfile_path = os.path.join(out_dir, outfile_name)
         with GzipFile(outfile_path + '.gz', 'w') if args.compress_dmd_logs else \
                 open(outfile_path, 'w') as outfile:
-
-            def write(s):
-                print(s, file=outfile)
-
-            write('# Processed DMD output')
-            if creation_time:
-                write('# Created on %s, device time (may be unreliable).' %
-                      creation_time.strftime('%c'))
-            write('# Processed on %s, host machine time.' %
-                  datetime.now().strftime('%c'))
-            if proc_name:
-                write('# Corresponds to "%s" app, pid %d' % (proc_name, pid))
-            elif pid:
-                write('# Corresponds to unknown app, pid %d' % pid)
-            else:
-                write('# Corresponds to unknown app, unknown pid.')
-
-            write('#\n# Contents of b2g-procrank:\n#')
-            for line in procrank:
-                write('#    ' + line.strip())
-            write('\n')
-
             with GzipFile(f, 'r') as infile:
                 fix_b2g_stack.fix_b2g_stacks_in_file(infile, outfile, args)
 
