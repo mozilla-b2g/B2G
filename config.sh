@@ -96,9 +96,14 @@ case "$1" in
 	;;
 
 "nexus-5")
-  echo DEVICE=hammerhead >> .tmp-config &&
-  repo_sync nexus-5
-  ;;
+	echo DEVICE=hammerhead >> .tmp-config &&
+	repo_sync nexus-5
+	;;
+
+"nexus-5-l")
+	echo DEVICE=hammerhead >> .tmp-config &&
+	repo_sync nexus-5-l
+	;;
 
 "optimus-l5")
 	echo DEVICE=m4 >> .tmp-config &&
@@ -194,6 +199,7 @@ case "$1" in
 	echo - nexus-4
 	echo - nexus-4-kk
 	echo - nexus-5
+	echo - nexus-5-l
 	echo - nexus-s
 	echo - nexus-s-4g
 	echo - flo "(Nexus 7 2013)"
