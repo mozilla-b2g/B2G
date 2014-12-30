@@ -833,6 +833,10 @@ class FlashFotaBuilder(object):
         self.fstab = { "/system": system, "/data": data }
         self.symlinks = []
 
+        self.fota_check_fingerprints = []
+        if os.environ.get("FOTA_FINGERPRINTS"):
+            self.fota_check_fingerprints = os.environ.get("FOTA_FINGERPRINTS").split(',')
+
         if "Item" not in globals():
             self.import_releasetools()
         self.generator = edify_generator.EdifyGenerator(1, {"fstab": self.fstab})
@@ -923,6 +927,14 @@ class FlashFotaBuilder(object):
             self.generator.Print("Checking %s" % (e['file'],))
             self.generator.script.append(('assert(sha1_check(read_file("%s"), "%s"));') % (e['file'], e['sha1'],))
         self.generator.Print("Gonk version is okay")
+
+    def AssertFingerprints(self):
+        """
+           Assert that one of the fingerprints matches
+        """
+        self.generator.Print("Checking build fingerprints")
+        self.generator.AssertSomeFingerprint(*self.fota_check_fingerprints)
+        self.generator.Print("Build is expected")
 
     def AssertDeviceOrModel(self, device):
         """
@@ -1042,8 +1054,12 @@ class FlashFotaBuilder(object):
         cmd = ('set_progress(0.25);')
         self.generator.script.append(self.generator._WordWrap(cmd))
 
-        if self.fota_check_device_name:
+        # We do not want to check the device/model when we are checking fingerprints.
+        if self.fota_check_device_name and not self.fota_check_fingerprints:
             self.AssertDeviceOrModel(self.fota_check_device_name)
+        else:
+            if self.fota_check_fingerprints:
+                self.AssertFingerprints()
 
         if not self.fota_type == 'partial':
             self.Format()
@@ -1051,13 +1067,14 @@ class FlashFotaBuilder(object):
         for mount_point in self.fstab:
             self.AssertMountIfNeeded(mount_point)
 
-        if self.fota_type == 'partial' and self.fota_check_gonk_version:
-            self.AssertGonkVersion()
-
         if self.fota_type == 'partial':
+            # Checking fingerprint is for cases where we cannot
+            # rely on checking sha1 of libs
+            if self.fota_check_gonk_version and not self.fota_check_fingerprints:
+                self.AssertGonkVersion()
+
             self.AssertSystemHasRwAccess()
 
-        if self.fota_type == 'partial':
             for d in self.fota_dirs:
                 self.generator.Print("Cleaning " + d)
                 self.generator.DeleteFilesRecursive(["/"+d])
