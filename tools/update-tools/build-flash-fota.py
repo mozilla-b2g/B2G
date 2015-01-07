@@ -46,6 +46,8 @@ def build_flash_fota(args):
 	builder.fota_dirs = args.fota_dirs.split(' ')
         builder.fota_files = [line.rstrip() for line in open(args.fota_files, 'r')]
 
+    builder.fota_sdcard = args.fota_sdcard or "/sdcard"
+
     builder.fota_check_device_name = args.fota_check_device_name
     builder.fota_check_gonk_version = args.fota_check_gonk_version
     builder.system_dir = args.system_dir
@@ -84,6 +86,9 @@ def main():
     fota_group.add_argument("--fota-files", dest="fota_files",
         required=False, default="",
         help="file containing list of files in /system to include")
+    fota_group.add_argument("--fota-sdcard", dest="fota_sdcard",
+        required=False, default="/sdcard",
+        help="sdcard mountpoint in recovery mode (RECOVERY_EXTERNAL_STORAGE)")
 
     fota_checks_group = parser.add_argument_group("fota_checks_group")
     fota_checks_group.add_argument("--fota-check-device-name", dest="fota_check_device_name",
