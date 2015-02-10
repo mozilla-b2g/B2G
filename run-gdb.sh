@@ -31,7 +31,10 @@ if [ -z "${GDB}" ]; then
    if [ -d prebuilt ]; then
       GDB=prebuilt/${HOST_OS}/toolchain/${TARGET_TRIPLE}-4.4.x/bin/${TARGET_TRIPLE}-gdb
    elif [ -d prebuilts ]; then
-      GDB=prebuilts/gcc/${HOST_OS}/${TARGET_ARCH}/${TARGET_TRIPLE}-4.7/bin/${TARGET_TRIPLE}-gdb
+      GDB=prebuilts/gcc/${HOST_OS}/${TARGET_ARCH}/${TARGET_TRIPLE}-4.8/bin/${TARGET_TRIPLE}-gdb
+      # If new version doesn't exist fallback to old version.
+      [ -f "${GDB}" ] || GDB=prebuilts/gcc/${HOST_OS}/${TARGET_ARCH}/${TARGET_TRIPLE}-4.7/bin/${TARGET_TRIPLE}-gdb
+      [ -f "${GDB}" ] || GDB=prebuilts/gcc/${HOST_OS}/${TARGET_ARCH}/${TARGET_TRIPLE}-4.6/bin/${TARGET_TRIPLE}-gdb
       PYTHON_DIR=prebuilts/python/${HOST_OS}/2.7.5
       if [ -d $PYTHON_DIR ]; then
         export PYTHONHOME=$PYTHON_DIR
