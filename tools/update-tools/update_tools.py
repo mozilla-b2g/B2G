@@ -395,15 +395,6 @@ class FotaZip(zipfile.ZipFile):
                 if not filter or filter(file_path, relpath):
                     self.write(file_path, relpath)
 
-            if not filter:
-                continue
-
-            for d in dirs:
-                dir_path = os.path.join(root, d)
-                relpath = zip_relpath(dir_path)
-                if not filter(dir_path, relpath):
-                    dirs.remove(d)
-
 class FotaZipBuilder(object):
     def build_unsigned_zip(self, update_dir, output_zip, update_bin):
         if not os.path.exists(update_dir):
