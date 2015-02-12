@@ -1081,6 +1081,10 @@ class FlashFotaBuilder(object):
 
             self.AssertSystemHasRwAccess()
 
+            for f in self.fota_files:
+                self.generator.Print("Removing " + f)
+                self.generator.DeleteFiles(["/"+f])
+
             for d in self.fota_dirs:
                 self.generator.Print("Cleaning " + d)
                 self.generator.DeleteFilesRecursive(["/"+d])
