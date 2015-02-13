@@ -1149,6 +1149,9 @@ class FlashFotaBuilder(object):
         if not self.fota_type == 'partial':
             Item.Get("system").SetPermissions(self.generator)
         else:
+            for f in self.fota_files:
+                Item.Get(f).SetPermissions(self.generator)
+
             for d in self.fota_dirs:
                 Item.Get(d).SetPermissions(self.generator)
 
