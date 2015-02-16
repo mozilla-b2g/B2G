@@ -99,12 +99,13 @@ def create_specific_output_dir(out_dir):
     if os.path.exists(out_dir):
         if os.path.isdir(out_dir):
             # Directory already exists; we're all good.
-            return
+            return out_dir
         else:
             raise Exception(textwrap.dedent('''\
                 Can't use %s as output directory; something that's not a
                 directory already exists with that name.''' % out_dir))
     os.mkdir(out_dir)
+    return out_dir
 
 
 def create_new_output_dir(out_dir_prefix):
