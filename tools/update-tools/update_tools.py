@@ -395,15 +395,6 @@ class FotaZip(zipfile.ZipFile):
                 if not filter or filter(file_path, relpath):
                     self.write(file_path, relpath)
 
-            if not filter:
-                continue
-
-            for d in dirs:
-                dir_path = os.path.join(root, d)
-                relpath = zip_relpath(dir_path)
-                if not filter(dir_path, relpath):
-                    dirs.remove(d)
-
 class FotaZipBuilder(object):
     def build_unsigned_zip(self, update_dir, output_zip, update_bin):
         if not os.path.exists(update_dir):
@@ -1090,6 +1081,10 @@ class FlashFotaBuilder(object):
 
             self.AssertSystemHasRwAccess()
 
+            for f in self.fota_files:
+                self.generator.Print("Removing " + f)
+                self.generator.DeleteFiles(["/"+f])
+
             for d in self.fota_dirs:
                 self.generator.Print("Cleaning " + d)
                 self.generator.DeleteFilesRecursive(["/"+d])
@@ -1154,6 +1149,9 @@ class FlashFotaBuilder(object):
         if not self.fota_type == 'partial':
             Item.Get("system").SetPermissions(self.generator)
         else:
+            for f in self.fota_files:
+                Item.Get(f).SetPermissions(self.generator)
+
             for d in self.fota_dirs:
                 Item.Get(d).SetPermissions(self.generator)
 
