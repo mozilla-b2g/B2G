@@ -167,6 +167,6 @@ if [ "$SCRIPT_NAME" == "run-ddd.sh" ]; then
     echo "ddd --debugger \"$GDB -x $GDBINIT\" $PROG $CORE_FILE"
     ddd --debugger "$GDB -x $GDBINIT" $PROG $CORE_FILE
 else
-    echo $GDB -x $GDBINIT $PROG $CORE_FILE 
+    echo $GDB -x $GDBINIT $PROG $CORE_FILE
     $GDB -x $GDBINIT $PROG $CORE_FILE
 fi
