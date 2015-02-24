@@ -42,7 +42,8 @@ update_time()
 	fi
 	echo Attempting to set the time on the device
 	run_adb wait-for-device &&
-	run_adb shell toolbox date `date +%s` &&
+	run_adb shell "toolbox date $(date +%s) ||
+	               toolbox date -s $(date +%Y%m%d.%H%M%S)" &&
 	run_adb shell setprop persist.sys.timezone $TIMEZONE
 }
 
