@@ -28,9 +28,7 @@ esac
 HOST_OS=$(uname -s | tr "[[:upper:]]" "[[:lower:]]")-x86
 
 if [ -z "${GDB}" ]; then
-   if [ -d prebuilt ]; then
-      GDB=prebuilt/${HOST_OS}/toolchain/${TARGET_TRIPLE}-4.4.x/bin/${TARGET_TRIPLE}-gdb
-   elif [ -d prebuilts ]; then
+   if [ -d prebuilts ]; then
       GDB=prebuilts/gcc/${HOST_OS}/${TARGET_ARCH}/${TARGET_TRIPLE}-4.8/bin/${TARGET_TRIPLE}-gdb
       # If new version doesn't exist fallback to old version.
       [ -f "${GDB}" ] || GDB=prebuilts/gcc/${HOST_OS}/${TARGET_ARCH}/${TARGET_TRIPLE}-4.7/bin/${TARGET_TRIPLE}-gdb
@@ -39,6 +37,8 @@ if [ -z "${GDB}" ]; then
       if [ -d $PYTHON_DIR ]; then
         export PYTHONHOME=$PYTHON_DIR
       fi
+   elif [ -d prebuilt ]; then
+      GDB=prebuilt/${HOST_OS}/toolchain/${TARGET_TRIPLE}-4.4.x/bin/${TARGET_TRIPLE}-gdb
    else
       echo "Not sure where gdb is located. Override using GDB= or fix the script."
       exit 1
@@ -167,6 +167,6 @@ if [ "$SCRIPT_NAME" == "run-ddd.sh" ]; then
     echo "ddd --debugger \"$GDB -x $GDBINIT\" $PROG $CORE_FILE"
     ddd --debugger "$GDB -x $GDBINIT" $PROG $CORE_FILE
 else
-    echo $GDB -x $GDBINIT $PROG $CORE_FILE 
+    echo $GDB -x $GDBINIT $PROG $CORE_FILE
     $GDB -x $GDBINIT $PROG $CORE_FILE
 fi
