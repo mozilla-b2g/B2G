@@ -256,7 +256,7 @@ delete_extra_gecko_files_on_device()
 
 delete_single_variant_persist()
 {
-	run_adb shell rm -r /persist/svoperapps > /dev/null
+	run_adb shell 'rm -rf /persist/svoperapps'
 }
 
 flash_gecko()
