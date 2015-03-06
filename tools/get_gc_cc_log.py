@@ -59,6 +59,7 @@ def compress_logs(log_filenames, out_dir):
     # Start compressing.
     pool = Pool()
     pool.map(gzip_compress, to_compress)
+    pool.close()
 
 
 def get_logs(args, out_dir=None, get_procrank_etc=True):
