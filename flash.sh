@@ -53,6 +53,11 @@ fastboot_flash_image()
 	if [ "$DEVICE" == "flatfish" ] && [ "$PARTITION" == "userdata" ]; then
 		PARTITION="data"
 	fi
+	if [ "$PARTITION" == "recovery" ]; then
+		if [ "$DEVICE" == "aries" ] || [ "$DEVICE" == "shinano" ]; then
+			PARTITION="FOTAKernel"
+		fi
+	fi
 	imgpath="out/target/product/$DEVICE/$1.img"
 	out="$(run_fastboot flash "$PARTITION" "$imgpath" 2>&1)"
 	rv="$?"
@@ -146,6 +151,9 @@ flash_fastboot()
 			if [ $? -ne 0 ]; then
 				return $?
 			fi
+		fi
+		if [ "$DEVICE" == "aries" ] || [ "$DEVICE" == "shinano" ]; then
+			fastboot_flash_image recovery
 		fi
 		fastboot_flash_image userdata &&
 		fastboot_flash_image_if_exists cache &&
