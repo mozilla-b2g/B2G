@@ -183,7 +183,7 @@ case "$1" in
 
 "aries")
 	echo PRODUCT_NAME=aries >> .tmp-config &&
-	repo_sync shinano
+	repo_sync aries
 	;;
 
 *)
