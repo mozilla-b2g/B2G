@@ -105,11 +105,6 @@ case "$1" in
 	repo_sync nexus-5-l
 	;;
 
-"optimus-l5")
-	echo DEVICE=m4 >> .tmp-config &&
-	repo_sync $1
-	;;
-
 "nexus-s")
 	echo DEVICE=crespo >> .tmp-config &&
 	repo_sync $1
@@ -120,7 +115,7 @@ case "$1" in
 	repo_sync $1
 	;;
 
-"otoro"|"unagi"|"keon"|"inari"|"leo"|"hamachi"|"peak"|"helix"|"wasabi"|"flatfish")
+"otoro"|"unagi"|"keon"|"inari"|"leo"|"hamachi"|"peak"|"helix"|"flatfish")
 	echo DEVICE=$1 >> .tmp-config &&
 	repo_sync $1
 	;;
@@ -130,23 +125,9 @@ case "$1" in
 	repo_sync $1
 	;;
 
-"fugu")
-	echo DEVICE=fugu >> .tmp-config &&
-	echo LUNCH=fugu-eng >> .tmp-config &&
-	echo TARGET_HVGA_ENABLE=true >> .tmp-config &&
-	echo GONK_VERSION=SP7710_13A_W13.39.7 >> .tmp-config &&
-	repo_sync $1
-	;;
-
 "tarako")
 	echo DEVICE=sp6821a_gonk >> .tmp-config &&
 	echo PRODUCT_NAME=sp6821a_gonk >> .tmp-config &&
-	repo_sync $1
-	;;
-
-"tara")
-	echo DEVICE=sp8810ea >> .tmp-config &&
-	echo LUNCH=sp8810eabase-eng >> .tmp-config &&
 	repo_sync $1
 	;;
 
@@ -227,10 +208,7 @@ case "$1" in
 	echo - leo
 	echo - hamachi
 	echo - helix
-	echo - wasabi
-	echo - fugu
 	echo - tarako
-	echo - tara
 	echo - dolphin
 	echo - dolphin-512
 	echo - pandaboard
