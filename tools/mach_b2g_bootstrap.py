@@ -260,6 +260,10 @@ def bootstrap(b2g_home):
         context.xre_path = xre_path
         # device name is set from load configuration step above
         context.device_name = os.environ.get('DEVICE_NAME', '').rstrip()
+        context.device = os.environ.get('DEVICE', '').rstrip()
+        context.target_out = os.path.join(
+            get_build_var('TARGET_PRODUCT_OUT_ROOT'),
+            context.device)
         context.get_build_var = get_build_var
 
     mach = mach.main.Mach(b2g_home)
