@@ -33,11 +33,7 @@ def build_flash_fota(args):
     update_bin = args.update_bin or os.path.join(update_tools.b2g_dir, "tools",
         "update-tools", "bin", "gonk", "update-binary")
 
-    system = update_tools.Partition.create_system(args.system_fs_type,
-                                                  args.system_location)
-    data = update_tools.Partition.create_data(args.data_fs_type,
-                                              args.data_location)
-    builder = update_tools.FlashFotaBuilder(system, data)
+    builder = update_tools.FlashFotaBuilder(args.system_fstab)
 
     builder.fota_type = args.fota_type
     builder.fota_dirs = []
@@ -54,6 +50,9 @@ def build_flash_fota(args):
 
     builder.sdk_version = args.sdk_version
 
+    builder.fota_partitions = args.fota_partitions.split(' ') or []
+    builder.fota_format_partitions = args.fota_format_partitions.split(' ') or []
+
     builder.build_flash_fota(args.system_dir, public_key, private_key,
                              output_zip, update_bin)
     print "FOTA Flash ZIP generated: %s" % output_zip
@@ -65,21 +64,13 @@ def main():
     system_group = parser.add_argument_group("system options")
     system_group.add_argument("--system-dir", dest="system_dir",
         required=True, help="path to system directory. required")
-    system_group.add_argument("--system-fs-type", dest="system_fs_type",
-        default=None, required=True, help="filesystem type for /system. required")
-    system_group.add_argument("--system-location", dest="system_location",
-        default=None, required=True, help="device location for /system. required")
-
-    data_group = parser.add_argument_group("data options")
-    data_group.add_argument("--data-fs-type", dest="data_fs_type",
-        default=None, required=True, help="filesystem type for /data. required")
-    data_group.add_argument("--data-location", dest="data_location",
-        default=None, required=True, help="device location for /data. required")
+    system_group.add_argument("--system-fstab", dest="system_fstab",
+        default=None, required=True, help="path to the recovery fstab. required")
 
     fota_group = parser.add_argument_group("fota options")
     fota_group.add_argument("--fota-type", dest="fota_type",
         required=False, default="full",
-        help="'partial' or 'full' fota. 'partial' requires a file list")
+        help="'partial', 'full' or 'fullimg' fota. 'partial' requires a file list")
     fota_group.add_argument("--fota-dirs", dest="fota_dirs",
         required=False, default="",
         help="space-separated string containing list of dirs to include, to delete files")
@@ -89,6 +80,12 @@ def main():
     fota_group.add_argument("--fota-sdcard", dest="fota_sdcard",
         required=False, default="/sdcard",
         help="sdcard mountpoint in recovery mode (RECOVERY_EXTERNAL_STORAGE)")
+    fota_group.add_argument("--fota-partitions", dest="fota_partitions",
+        required=False, default="",
+        help="space-separated string containing list of partitions to flash")
+    fota_group.add_argument("--fota-format-partitions", dest="fota_format_partitions",
+        default="", required=False,
+        help="space-separated list of partitions mount point that we allow to format")
 
     fota_checks_group = parser.add_argument_group("fota_checks_group")
     fota_checks_group.add_argument("--fota-check-device-name", dest="fota_check_device_name",
