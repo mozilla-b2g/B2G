@@ -926,6 +926,8 @@ class FlashFotaBuilder(object):
 
         if "Item" not in globals():
             self.import_releasetools()
+            if int(os.environ['PLATFORM_SDK_VERSION']) >= 21:
+                self.itemset = ItemSet("system", "META/filesystem_config.txt")
         self.generator = edify_generator.EdifyGenerator(1, {"fstab": self.fstab})
 
     def GetFilesType(self, directory):
@@ -1161,7 +1163,7 @@ class FlashFotaBuilder(object):
         if self.fota_type == 'partial':
             if not relpath in self.fota_files:
                 return False
-        Item.Get(relpath, dir=os.path.isdir(path))
+        self.GetItemOrItemset().Get(relpath, dir=os.path.isdir(path))
         if not os.path.isdir(path) and os.path.islink(path):
             # This assumes that system always maps to /system, data to /data, etc
             self.symlinks.append((os.readlink(path), "/" + relpath))
@@ -1319,24 +1321,30 @@ class FlashFotaBuilder(object):
         fs_config = Tool(os.path.join(host_bin_dir, "fs_config"))
         suffix = { False: "", True: "/" }
         paths = "\n".join([i.name + suffix[i.dir]
-                           for i in Item.ITEMS.itervalues() if i.name]) + '\n'
+                           for i in self.GetItemOrItemset().ITEMS.itervalues() if i.name]) + '\n'
         self.fs_config_data = fs_config.run(input=paths)
 
         # see build/tools/releasetools/ota_from_target_files
-        Item.GetMetadata(self)
+        self.GetItemOrItemset().GetMetadata(self)
         if not self.fota_type == 'partial':
-            Item.Get("system").SetPermissions(self.generator)
+            self.GetItemOrItemset().Get("system").SetPermissions(self.generator)
         else:
             for f in self.fota_files:
-                Item.Get(f).SetPermissions(self.generator)
+                self.GetItemOrItemset().Get(f).SetPermissions(self.generator)
 
             for d in self.fota_dirs:
-                Item.Get(d).SetPermissions(self.generator)
+                self.GetItemOrItemset().Get(d).SetPermissions(self.generator)
 
     "Emulate zipfile.read so we can reuse Item.GetMetadata"
     def read(self, path):
         if path == "META/filesystem_config.txt":
             return self.fs_config_data
         raise KeyError
+
+    def GetItemOrItemset(self):
+        if int(os.environ['PLATFORM_SDK_VERSION']) >= 21:
+            return self.itemset
+        else:
+            return Item
 
 b2g_config = B2GConfig()
