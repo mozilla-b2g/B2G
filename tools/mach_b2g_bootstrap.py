@@ -173,11 +173,11 @@ def bootstrap(b2g_home):
         # export the variables it creates.
         f = tempfile.NamedTemporaryFile()
         cmd = ['/usr/bin/env', 'bash', '-c',
-               'set -a && source %s > %s && printenv'
+               'set -a && source %s > %s && printenv --null'
                 % (os.path.join(b2g_home, 'load-config.sh'), f.name)]
         try:
             output = subprocess.check_output(cmd, stderr=subprocess.STDOUT, cwd=b2g_home)
-            for line in [l.decode('utf8') for l in output.splitlines()]:
+            for line in [l.decode('utf8') for l in output.split('\x00')[:-1]]:
                 key, value = line.split('=', 1)
                 os.environ[key.encode('utf8')] = value.encode('utf8')
         except subprocess.CalledProcessError, e:
