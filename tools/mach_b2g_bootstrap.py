@@ -6,6 +6,7 @@ from __future__ import print_function, unicode_literals
 
 import imp
 import os
+import pickle
 import platform
 import subprocess
 import sys
@@ -173,13 +174,11 @@ def bootstrap(b2g_home):
         # export the variables it creates.
         f = tempfile.NamedTemporaryFile()
         cmd = ['/usr/bin/env', 'bash', '-c',
-               'set -a && source %s > %s && printenv --null'
+               'set -a && source %s > %s && python -c "import pickle,os;print(pickle.dumps(os.environ))"'
                 % (os.path.join(b2g_home, 'load-config.sh'), f.name)]
         try:
             output = subprocess.check_output(cmd, stderr=subprocess.STDOUT, cwd=b2g_home)
-            for line in [l.decode('utf8') for l in output.split('\x00')[:-1]]:
-                key, value = line.split('=', 1)
-                os.environ[key.encode('utf8')] = value.encode('utf8')
+            os.environ.update(pickle.loads(output))
         except subprocess.CalledProcessError, e:
             print(LOAD_CONFIG_FAILED % e.output.strip())
             sys.exit(1)
