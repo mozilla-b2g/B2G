@@ -916,8 +916,9 @@ class RecoveryFSTab:
             return self.read_v2()
 
 class FlashFotaBuilder(object):
-    def __init__(self, fstab):
+    def __init__(self, fstab, sdk):
         self.fstab = RecoveryFSTab(fstab).read()
+        self.sdk_version = sdk
         self.symlinks = []
 
         self.fota_check_fingerprints = []
@@ -926,7 +927,7 @@ class FlashFotaBuilder(object):
 
         if "Item" not in globals():
             self.import_releasetools()
-            if int(os.environ['PLATFORM_SDK_VERSION']) >= 21:
+            if self.sdk_version >= 21:
                 self.itemset = ItemSet("system", "META/filesystem_config.txt")
         self.generator = edify_generator.EdifyGenerator(1, {"fstab": self.fstab})
 
@@ -1342,7 +1343,7 @@ class FlashFotaBuilder(object):
         raise KeyError
 
     def GetItemOrItemset(self):
-        if int(os.environ['PLATFORM_SDK_VERSION']) >= 21:
+        if self.sdk_version >= 21:
             return self.itemset
         else:
             return Item
