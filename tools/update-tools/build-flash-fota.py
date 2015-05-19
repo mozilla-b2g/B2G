@@ -33,7 +33,8 @@ def build_flash_fota(args):
     update_bin = args.update_bin or os.path.join(update_tools.b2g_dir, "tools",
         "update-tools", "bin", "gonk", "update-binary")
 
-    builder = update_tools.FlashFotaBuilder(args.system_fstab)
+    builder = update_tools.FlashFotaBuilder(fstab=args.system_fstab,
+                                            sdk=args.sdk_version)
 
     builder.fota_type = args.fota_type
     builder.fota_dirs = []
@@ -47,8 +48,6 @@ def build_flash_fota(args):
     builder.fota_check_device_name = args.fota_check_device_name
     builder.fota_check_gonk_version = args.fota_check_gonk_version
     builder.system_dir = args.system_dir
-
-    builder.sdk_version = args.sdk_version
 
     builder.fota_partitions = args.fota_partitions.split(' ') or []
     builder.fota_format_partitions = args.fota_format_partitions.split(' ') or []
