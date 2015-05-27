@@ -69,16 +69,20 @@ if [ $ret -ne 0 ]; then
 	echo Build with \|./build.sh -j1\| for better messages
 	echo If all else fails, use \|rm -rf objdir-gecko\| to clobber gecko and \|rm -rf out\| to clobber everything else.
 else
-	if echo $DEVICE | grep generic > /dev/null ; then
-		echo Run \|./run-emulator.sh\| to start the emulator
-		exit 0
-	fi
 	case "$1" in
 	"gecko")
-		echo Run \|./flash.sh gecko\| to update gecko
+		echo Run \|./build.sh snod\| to update the system image.
+		echo Run \|./flash.sh gecko\| to update gecko.
+		if echo $DEVICE | grep generic > /dev/null ; then
+			echo $(tput setaf 1)$(tput bold)You must update the system image for emulator to pick up the updated gecko.$(tput sgr0)
+		fi
 		;;
 	*)
-		echo Run \|./flash.sh\| to flash all partitions of your device
+		if echo $DEVICE | grep generic > /dev/null ; then
+			echo Run \|./run-emulator.sh\| to start the emulator
+		else
+			echo Run \|./flash.sh\| to flash all partitions of your device
+		fi
 		;;
 	esac
 	exit 0
