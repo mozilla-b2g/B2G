@@ -359,26 +359,40 @@ class Libraries:
       original_address = address_map[address[1]]
       lib.symbols[original_address] = sym
 
-  def ScanLocations(self, progress=False):
-    """Scans through the locations and builds a set of unresolved addresses for each library."""
+  def SearchUnresolvedAddresses(self, progress=False):
+    """Search and build a set of unresolved addresses for each library."""
     if progress:
       print "Scanning for unresolved addresses..."
-    last_address = None
-    for thread in self.profile["threads"]:
-      samples = thread["samples"]
-      for sample in samples:
-        frames = sample["frames"]
-        for frame in frames:
-          address_str = frame["location"]
-          if address_str[:2] == "0x":
-            address = int(address_str, 0)
-            # Quick optimization since lots of times the same address appears
-            # many times in a row. We only need to add each address once.
-            if address != last_address:
-              lib = self.Lookup(address)
-              if lib:
-                lib.AddUnresolvedAddress(address)
-                last_address = address
+
+    def getUnresolvedAddressesV2():
+      last_location = None
+      for thread in self.profile["threads"]:
+        samples = thread["samples"]
+        for sample in samples:
+          frames = sample["frames"]
+          for frame in frames:
+            location = frame["location"]
+            if location[:2] == "0x":
+              # Quick optimization since lots of times the same address appears
+              # many times in a row. We only need to add each address once.
+              if location != last_location:
+                yield int(location, 0)
+                last_location = location
+
+    def getUnresolvedAddressesV3():
+      for thread in self.profile["threads"]:
+        for str in thread["stringTable"]:
+          if str[:2] == "0x":
+            yield int(str, 0)
+
+    if self.profile["meta"]["version"] >= 3:
+      addresses = getUnresolvedAddressesV3()
+    else:
+      addresses = getUnresolvedAddressesV2()
+    for address in addresses:
+      lib = self.Lookup(address)
+      if lib:
+        lib.AddUnresolvedAddress(address)
 
   def SymbolicationTable(self):
     """Create the union of all of the symbols from all of the libraries."""
@@ -453,7 +467,7 @@ def main():
     else:
       print("Address 0x%08x not found in a library" % address)
   else:
-    libs.ScanLocations(progress=progress)
+    libs.SearchUnresolvedAddresses(progress=progress)
     libs.ResolveSymbols(progress=progress)
     if args.dump_syms:
       libs.DumpSymbols()
