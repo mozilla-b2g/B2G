@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 import argparse, bisect, json, os, subprocess, sys
-import os.path, re, requests
+import os.path, re, urllib2
 
 gSpecialLibs = {
     # The [vectors] is a special section used for functions which can really
@@ -341,19 +341,22 @@ class Libraries:
       "symbolSources": ["B2G", "Firefox"]
     }
 
-    request = json.dumps(symbolication_request)
+    request_data = json.dumps(symbolication_request)
 
     headers = {
       "Content-Type": "application/json",
-      "Content-Length": len(request),
+      "Content-Length": len(request_data),
       "Connection": "close"
     }
 
-    r = requests.post(self.symbols_path, data=request, headers=headers)
-    if r.status_code != 200:
+    request = urllib2.Request(url=self.symbols_path, data=request_data, headers=headers)
+    r = urllib2.urlopen(request)
+    if r.getcode() != 200:
       raise Exception("Bad request: " + str(r.status_code))
 
-    for sym, address in zip(r.json()[0], addresses):
+    content = json.load(r)
+
+    for sym, address in zip(content[0], addresses):
       index = address[0]
       lib = libs[index]
       original_address = address_map[address[1]]
