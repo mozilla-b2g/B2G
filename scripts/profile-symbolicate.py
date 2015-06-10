@@ -386,7 +386,10 @@ class Libraries:
       for thread in self.profile["threads"]:
         for str in thread["stringTable"]:
           if str[:2] == "0x":
-            yield int(str, 0)
+            try:
+              yield int(str, 0)
+            except ValueError:
+              continue
 
     if self.profile["meta"]["version"] >= 3:
       addresses = getUnresolvedAddressesV3()
