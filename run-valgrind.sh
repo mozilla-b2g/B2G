@@ -47,8 +47,10 @@ else
   $ADB shell "rm -rf $B2G_DIR && cp -r /system/b2g $B2G_DIR"
 
   # compress first, to limit amount of data pushed over the slow pipe
+  # Compressing at level 3 or greater increases compression time a lot
+  # without having much effect on resulting file size, and so is a net loss.
   echo "Compressing libxul.so..."
-  time gzip < "$LIBXUL" > $GECKO_OBJDIR/toolkit/library/libxul.so.gz
+  time gzip -2 < "$LIBXUL" > $GECKO_OBJDIR/toolkit/library/libxul.so.gz
 
   echo "Pushing compressed debug libxul to device (this can take upwards of 5 minutes)"
   time $ADB push $GECKO_OBJDIR/toolkit/library/libxul.so.gz $B2G_DIR/libxul.so.gz
@@ -64,16 +66,50 @@ fi
 $ADB wait-for-device
 $ADB shell stop b2g
 
-VALGRIND_ARGS=""
+CORE_ARGS=""
 if [ "$1" = "vgdb" ]; then
   # delete stale vgdb pipes
   $ADB shell rm /data/local/tmp/vgdb*
-  VALGRIND_ARGS="--trace-children=no --vgdb-error=0 --vgdb=yes"
+  CORE_ARGS="--trace-children=no --vgdb-error=0 --vgdb=yes"
 else
-  VALGRIND_ARGS="--trace-children=yes"
+  CORE_ARGS="--trace-children=yes"
 fi
+
+# Flags for the Valgrind core -- applicable to all tools.
+#
+# The --px- flags control precise exceptions.  They are mandatory for Gecko.
+CORE_ARGS="$CORE_ARGS --px-default=allregs-at-mem-access"
+CORE_ARGS="$CORE_ARGS --px-file-backed=unwindregs-at-mem-access"
+# Show source paths relative to the source tree root
+CORE_ARGS="$CORE_ARGS --fullpath-after=`pwd`/"
+# Read full debuginfo for libraries, if available
+CORE_ARGS="$CORE_ARGS --extra-debuginfo-path=/sdcard/symbols-for-valgrind"
+# Specify what GPU the device has.
+CORE_ARGS="$CORE_ARGS --kernel-variant=android-gpu-adreno3xx"
+# Other flags
+CORE_ARGS="$CORE_ARGS --error-limit=no --fair-sched=yes"
+
+# Flags for Memcheck.
+#
+MC_ARGS=""
+# Not necessary for a --disable-jemalloc build, but ..
+MC_ARGS="$MC_ARGS --soname-synonyms=somalloc=libmozglueZdso"
+# Avoid a lot of pointless noise.
+MC_ARGS="$MC_ARGS --show-mismatched-frees=no --partial-loads-ok=yes"
+# Avoid segfaulting Gecko until such time as bug 1166724 is fixed
+MC_ARGS="$MC_ARGS --malloc-fill=0x00"
+# Say what we expect the average translation size to be.  Getting this
+# right can save tens of megabytes of RAM on the phone.
+MC_ARGS="$MC_ARGS --avg-transtab-entry-size=400"
+# Request 11 sectors for translation storage.  More sectors improves
+# performance but costs a lot of memory.
+MC_ARGS="$MC_ARGS --num-transtab-sectors=11"
+
+# Gather them all together.  EXTRA_ARGS allows users to pass in extra
+# arguments on the command line.
+VALGRIND_ARGS="$CORE_ARGS $MC_ARGS $EXTRA_ARGS"
 
 # Due to the fact that we follow forks, we can't log to a logfile. Expect the
 # user to redirect stdout.
-$ADB shell "B2G_DIR='/data/valgrind-b2g' HOSTNAME='b2g' LOGNAME='b2g' COMMAND_PREFIX='/system/bin/valgrind -v --fair-sched=try $VALGRIND_ARGS --soname-synonyms=somalloc=libmozglueZdso --error-limit=no --smc-check=all-non-file' exec /system/bin/b2g.sh"
+$ADB shell "B2G_DIR='/data/valgrind-b2g' HOSTNAME='b2g' LOGNAME='b2g' COMMAND_PREFIX='/system/bin/valgrind $VALGRIND_ARGS' exec /system/bin/b2g.sh"
 
