@@ -120,7 +120,7 @@ case "$1" in
 	repo_sync $1
 	;;
 
-"flame"|"flame-kk")
+"flame"|"flame-kk"|"flame-l")
 	echo PRODUCT_NAME=flame >> .tmp-config &&
 	repo_sync $1
 	;;
@@ -216,6 +216,7 @@ case "$1" in
 	echo - flatfish
 	echo - flame
 	echo - flame-kk
+	echo - flame-l
 	echo - rpi "(Revision B)"
 	echo - shinano
 	echo - aries
