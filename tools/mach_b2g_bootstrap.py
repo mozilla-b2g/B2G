@@ -77,6 +77,11 @@ CATEGORIES = {
         'long': 'Run tests.',
         'priority': 60,
     },
+    'ci': {
+        'short': 'CI',
+        'long': 'Taskcluster commands',
+        'priority': 59
+    },
     'devenv': {
         'short': 'Development Environment',
         'long': 'Set up and configure your development environment.',
