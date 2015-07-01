@@ -5,6 +5,8 @@ from random import *
 def print_device_home(device):
   if device == 'unagi':
     print 'tap 44 515 1 2000' # long home key for unagi
+  elif device == 'aries':
+    print 'tap 360 1240 1 2000' # also a long software home press
   else:
     # 102 corresponds to the home button key (at least on flame devices)
     print 'keydown 102'
@@ -43,6 +45,9 @@ def main():
   elif device == 'flame':
     maxX = 480
     maxY = 854
+  elif device == 'aries':
+    maxX = 720
+    maxY = 1280
   else:
     maxX = 320
     maxY = 520
