@@ -920,6 +920,7 @@ class FlashFotaBuilder(object):
         self.fstab = RecoveryFSTab(fstab).read()
         self.sdk_version = sdk
         self.symlinks = []
+        self.info_dict = {"fstab": self.fstab}
 
         self.fota_check_fingerprints = []
         if os.environ.get("FOTA_FINGERPRINTS"):
@@ -929,7 +930,11 @@ class FlashFotaBuilder(object):
             self.import_releasetools()
             if self.sdk_version >= 21:
                 self.itemset = ItemSet("system", "META/filesystem_config.txt")
-        self.generator = edify_generator.EdifyGenerator(1, {"fstab": self.fstab})
+        # Bug 1163956, enable set_metadata() and set_metadata_recursive() in updater-script
+        # export in BoardConfig.mk or per-device.mk
+        if bool(os.environ.get('USE_SET_METADATA', False)) == True:
+            self.info_dict['use_set_metadata'] = True
+        self.generator = edify_generator.EdifyGenerator(1, self.info_dict)
 
     def GetFilesType(self, directory):
         """
