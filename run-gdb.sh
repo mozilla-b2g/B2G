@@ -54,7 +54,7 @@ SYMDIR=$GONK_OBJDIR/symbols
 if [ "$1" != "core" ] ; then
    GDBSERVER_PID=$(get_pid_by_name gdbserver)
 
-   GDB_PORT=$((10000 + $(id -u) % 50000))
+   GDB_PORT=$((10000 + $(id -u) % 10000))
    if [ "$1" = "vgdb"  -a  -n "$2" ] ; then
       GDB_PORT="$2"
    elif [ "$1" = "attach"  -a  -n "$2" ] ; then
@@ -170,3 +170,4 @@ else
     echo $GDB -x $GDBINIT $PROG $CORE_FILE
     $GDB -x $GDBINIT $PROG $CORE_FILE
 fi
+
