@@ -196,6 +196,16 @@ case "$1" in
 	repo_sync $1
 	;;
 
+"tianchi-l")
+	echo PRODUCT_NAME=tianchi >> .tmp-config &&
+	repo_sync $1
+	;;
+
+"flamingo-l")
+	echo PRODUCT_NAME=flamingo >> .tmp-config &&
+	repo_sync $1
+	;;
+
 *)
 	echo "Usage: $0 [-cdflnq] (device name)"
 	echo "Flags are passed through to |./repo sync|."
@@ -242,6 +252,8 @@ case "$1" in
 	echo - leo-l "(Z3 L)"
 	echo - scorpion-l "(Z3 Tablet Compact L)"
 	echo - sirius-l "(Z2 L)"
+	echo - tianchi-l "(T2U L)"
+	echo - flamingo-l "(E3 L)"
 	exit -1
 	;;
 esac
