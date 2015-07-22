@@ -55,7 +55,7 @@ fastboot_flash_image()
 		PARTITION="data"
 	fi
 	if [ "$PARTITION" == "recovery" ]; then
-		if [ "$DEVICE" == "aries" ] || [ "$DEVICE" == "shinano" ]; then
+		if [ "$DEVICE" == "aries" ] || [ "$DEVICE" == "leo" ]; then
 			PARTITION="FOTAKernel"
 		fi
 	fi
@@ -153,7 +153,7 @@ flash_fastboot()
 				return $?
 			fi
 		fi
-		if [ "$DEVICE" == "aries" ] || [ "$DEVICE" == "shinano" ]; then
+		if [ "$DEVICE" == "aries" ] || [ "$DEVICE" == "leo" ]; then
 			fastboot_flash_image recovery
 		fi
 		fastboot_flash_image userdata &&
@@ -374,7 +374,7 @@ case "$PROJECT" in
 esac
 
 case "$DEVICE" in
-"leo"|"hamachi"|"helix"|"sp6821a_gonk")
+"hamachi"|"helix"|"sp6821a_gonk")
 	if $FULLFLASH; then
 		flash_fastboot nounlock $PROJECT
 		exit $?
@@ -391,7 +391,7 @@ case "$DEVICE" in
 	exit $?
 	;;
 
-"flame"|"otoro"|"unagi"|"keon"|"peak"|"inari"|"wasabi"|"flatfish"|"shinano"|"aries"|"scx15_sp7715"*)
+"flame"|"otoro"|"unagi"|"keon"|"peak"|"inari"|"wasabi"|"flatfish"|"leo"|"aries"|"scx15_sp7715"*)
 	flash_fastboot nounlock $PROJECT
 	;;
 
