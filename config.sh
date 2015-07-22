@@ -115,7 +115,7 @@ case "$1" in
 	repo_sync $1
 	;;
 
-"otoro"|"unagi"|"keon"|"inari"|"leo"|"hamachi"|"peak"|"helix"|"wasabi"|"flatfish")
+"otoro"|"unagi"|"keon"|"inari"|"hamachi"|"peak"|"helix"|"wasabi"|"flatfish")
 	echo DEVICE=$1 >> .tmp-config &&
 	repo_sync $1
 	;;
@@ -176,8 +176,8 @@ case "$1" in
 	repo_sync $1
 	;;
 
-"shinano"|"shinano-l")
-	echo PRODUCT_NAME=shinano >> .tmp-config &&
+"leo-kk"|"leo-l")
+	echo PRODUCT_NAME=leo >> .tmp-config &&
 	repo_sync $1
 	;;
 
@@ -205,7 +205,6 @@ case "$1" in
 	echo - inari
 	echo - keon
 	echo - peak
-	echo - leo
 	echo - hamachi
 	echo - helix
 	echo - tarako
@@ -218,8 +217,8 @@ case "$1" in
 	echo - flame-kk
 	echo - flame-l
 	echo - rpi "(Revision B)"
-	echo - shinano "(Z3 KK)"
-	echo - shinano-l "(Z3 L)"
+	echo - leo-kk "(Z3 KK)"
+	echo - leo-l "(Z3 L)"
 	echo - aries "(Z3C KK)"
 	echo - aries-l "(Z3C L)"
 	echo - emulator
