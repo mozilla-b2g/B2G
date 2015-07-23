@@ -642,10 +642,9 @@ HELP_start="Starts the profiler. -p [process] -e [entries] -s [stack scan mode]
               -i [interval] -m [profiler mode] -f [features] -t [threads].
               e.g. ./profile.sh start -p b2g -t Compositor -i 1"
 cmd_start() {
-  args=$@
-  if [ -n "$args" ]
+  if [ $# -gt 0 ]
   then
-    start_with_args $args
+    start_with_args "$@"
   else
     stop_b2g
     remove_profile_files
