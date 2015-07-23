@@ -186,6 +186,11 @@ case "$1" in
 	repo_sync $1
 	;;
 
+"scorpion-l")
+	echo PRODUCT_NAME=scorpion >> .tmp-config &&
+	repo_sync $1
+	;;
+
 *)
 	echo "Usage: $0 [-cdflnq] (device name)"
 	echo "Flags are passed through to |./repo sync|."
@@ -217,10 +222,6 @@ case "$1" in
 	echo - flame-kk
 	echo - flame-l
 	echo - rpi "(Revision B)"
-	echo - leo-kk "(Z3 KK)"
-	echo - leo-l "(Z3 L)"
-	echo - aries "(Z3C KK)"
-	echo - aries-l "(Z3C L)"
 	echo - emulator
 	echo - emulator-jb
 	echo - emulator-kk
@@ -229,6 +230,12 @@ case "$1" in
 	echo - emulator-x86-jb
 	echo - emulator-x86-kk
 	echo - emulator-x86-l
+	echo "> Sony Xperia devices"
+	echo - aries "(Z3 Compact KK)"
+	echo - aries-l "(Z3 Compact L)"
+	echo - leo-kk "(Z3 KK)"
+	echo - leo-l "(Z3 L)"
+	echo - scorpion-l "(Z3 Tablet Compact L)"
 	exit -1
 	;;
 esac
