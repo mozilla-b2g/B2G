@@ -16,16 +16,29 @@ if [ -z "$status" ]; then
   exit
 fi
 
-if [ $# -eq 1 ]; then
-  steps=$1
+if [ $# -gt 0 ]; then
+  device=$1
+else
+  device=flame
+fi
+
+if [ $# -eq 2 ]; then
+  steps=$2
 else
   steps=100000
 fi
 
+if [ $device == "aries" ]; then
+  event_device=/dev/input/event1
+else
+  event_device=/dev/input/event0
+fi
+
+
 PYTHON=${PYTHON:-`which python`}
-$PYTHON generate-orangutan-script.py --steps $steps >$SCRIPT_NAME
+$PYTHON generate-orangutan-script.py -d $device --steps $steps >$SCRIPT_NAME
 $ADB push $SCRIPT_NAME $SCRIPT_PATH
 echo "Running the script..."
-$ADB shell $orangutan /dev/input/event0 $SCRIPT_PATH/$SCRIPT_NAME
+$ADB shell $orangutan $event_device $SCRIPT_PATH/$SCRIPT_NAME
 $ADB shell rm $SCRIPT_PATH/$SCRIPT_NAME
 echo "Done"
