@@ -4,70 +4,34 @@ require 'formula'
 # gccgo "is currently known to work on GNU/Linux and RTEMS. Solaris support
 # is in progress. It may or may not work on other platforms."
 
-def cxx?
-  ARGV.include? '--enable-cxx'
-end
-
-def fortran?
-  ARGV.include? '--enable-fortran'
-end
-
-def java?
-  ARGV.include? '--enable-java'
-end
-
-def objc?
-  ARGV.include? '--enable-objc'
-end
-
-def objcxx?
-  ARGV.include? '--enable-objcxx'
-end
-
-def build_everything?
-  ARGV.include? '--enable-all-languages'
-end
-
-def nls?
-  ARGV.include? '--enable-nls'
-end
-
-def profiledbuild?
-  ARGV.include? '--enable-profiled-build'
-end
-
 class Ecj < Formula
   # Little Known Fact: ecj, Eclipse Java Complier, is required in order to
   # produce a gcj compiler that can actually parse Java source code.
   url 'ftp://sourceware.org/pub/java/ecj-4.5.jar'
-  md5 'd7cd6a27c8801e66cbaa964a039ecfdb'
+  sha256 '98fd128f1d374d9e42fd9d4836bdd249c6d511ebc6c0df17fbc1b9df96c3d781'
 end
 
 class Gcc46 < Formula
   homepage 'http://gcc.gnu.org'
   url 'http://ftpmirror.gnu.org/gcc/gcc-4.6.3/gcc-4.6.3.tar.bz2'
   mirror 'http://ftp.gnu.org/gnu/gcc/gcc-4.6.3/gcc-4.6.3.tar.bz2'
-  md5 '773092fe5194353b02bb0110052a972e'
+  sha256 'e8f5853d4eec2f5ebaf8a72ae4d53c436aacf98153b2499f8635b48c4718a093'
 
   depends_on 'gmp'
   depends_on 'libmpc'
   depends_on 'mpfr'
 
+  option 'enable-cxx', 'Build the g++ compiler'
+  option 'enable-fortran', 'Build the gfortran compiler'
+  option 'enable-java', 'Buld the gcj compiler'
+  option 'enable-objc', 'Enable Objective-C language support'
+  option 'enable-objcxx', 'Enable Objective-C++ language support'
+  option 'enable-all-languages', 'Enable all compilers and languages, except Ada'
+  option 'enable-nls', 'Build with natural language support'
+  option 'enable-profiled-build', 'Make use of profile guided optimization when bootstrapping GCC'
+
   def patches
     { :p0 => ["http://gcc.gnu.org/bugzilla/attachment.cgi?id=25656"] }
-  end
-
-  def options
-    [
-      ['--enable-cxx', 'Build the g++ compiler'],
-      ['--enable-fortran', 'Build the gfortran compiler'],
-      ['--enable-java', 'Buld the gcj compiler'],
-      ['--enable-objc', 'Enable Objective-C language support'],
-      ['--enable-objcxx', 'Enable Objective-C++ language support'],
-      ['--enable-all-languages', 'Enable all compilers and languages, except Ada'],
-      ['--enable-nls', 'Build with natural language support'],
-      ['--enable-profiled-build', 'Make use of profile guided optimization when bootstrapping GCC']
-    ]
   end
 
   def install
@@ -117,9 +81,9 @@ class Gcc46 < Formula
       "--disable-multilib"
     ]
 
-    args << '--disable-nls' unless nls?
+    args << '--disable-nls' unless build.include? 'enable-nls'
 
-    if build_everything?
+    if build.include? 'enable-all-languages'
       # Everything but Ada, which requires a pre-existing GCC Ada compiler
       # (gnat) to bootstrap. GCC 4.6.0 add go as a language option, but it is
       # currently only compilable on Linux.
@@ -129,14 +93,14 @@ class Gcc46 < Formula
       # here.
       languages = %w[c]
 
-      languages << 'c++' if cxx?
-      languages << 'fortran' if fortran?
-      languages << 'java' if java?
-      languages << 'objc' if objc?
-      languages << 'obj-c++' if objcxx?
+      languages << 'c++' if build.include? 'enable-cxx'
+      languages << 'fortran' if build.include? 'enable-fortran'
+      languages << 'java' if build.include? 'enable-java'
+      languages << 'objc' if build.include? 'enable-objc'
+      languages << 'obj-c++' if build.include? 'enable-objcxx'
     end
 
-    if java? or build_everything?
+    if build.include?('enable-java') or build.include?('enable-all-languages')
       source_dir = Pathname.new Dir.pwd
 
       Ecj.new.brew do |ecj|
@@ -151,7 +115,7 @@ class Gcc46 < Formula
     Dir.chdir 'build' do
       system '../configure', "--enable-languages=#{languages.join(',')}", *args
 
-      if profiledbuild?
+      if build.include? 'enable-profiled-build'
         # Takes longer to build, may bug out. Provided for those who want to
         # optimise all the way to 11.
         system 'make profiledbootstrap'
