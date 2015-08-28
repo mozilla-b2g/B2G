@@ -150,7 +150,7 @@ bootstrap_mac() {
     fi
 
     # We don't need additional toolchain since Mavericks (10.9)
-    if [[ $osx_version != "10.9" ]]; then
+    if [[ $osx_version =~ 10\.[6-8] ]]; then
         found_apple_gcc=0
         check_apple_gcc
 
@@ -236,7 +236,7 @@ bootstrap_mac() {
 }
 
 install_xcode() {
-  if [ $osx_version \> "10.6" ]; then
+  if [[ $osx_version =~ 10\.([7-9]|[1-9][0-9]+) ]]; then
       # In OS X 10.7+, we open the Mac App Store for Xcode
       # Opening the App Store is annoying, so ignore option_auto_install here
       echo "You will need to install Xcode 4.3 or newer to build Boot to Gecko on your version of OS X."
@@ -307,7 +307,6 @@ install_ten_six_sdk () {
 
 check_xcode() {
     osx_version=`sw_vers -productVersion`
-    osx_version=${osx_version:0:4}
 
     # First, if xcode-select isn't around, we have no Xcode at all, or at least not
     # the command-line tools
@@ -340,9 +339,10 @@ check_xcode() {
       osx_107_sdk=$xcode_dev_path/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.7.sdk
       osx_108_sdk=$xcode_dev_path/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.8.sdk
       osx_109_sdk=$xcode_dev_path/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.9.sdk
+      osx_1010_sdk=$xcode_dev_path/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.10.sdk
     fi
 
-    if [[ $osx_version != "10.9" ]]; then
+    if [[ $osx_version =~ 10\.[6-8] ]]; then
         test -d $osx_106_sdk
         if [ $? -ne 0 ] ; then
             if [ "$option_auto_install" = "no" ]; then
@@ -371,6 +371,8 @@ check_xcode() {
       osx_sdk=$osx_108_sdk
     elif [ -d "$osx_109_sdk" ]; then
       osx_sdk=$osx_109_sdk
+    elif [ -d "$osx_1010_sdk" ]; then
+      osx_sdk=$osx_1010_sdk
     fi
     
     # Peel the OS X SDK version out of the path so we don't have to mess with it
