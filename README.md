@@ -205,7 +205,7 @@ To restart B2G and run B2G under gdb:
 
 To attach gdb to a running B2G process:
 
-    ./run-gdb.sh attach
+    ./run-gdb.sh attach <PID>
 
 ## Test
 

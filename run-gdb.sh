@@ -54,7 +54,6 @@ SYMDIR=$GONK_OBJDIR/symbols
 if [ "$1" != "core" ] ; then
    GDBSERVER_PID=$(get_pid_by_name gdbserver)
 
-   GDB_PORT=$((10000 + $(id -u) % 10000))
    if [ "$1" = "vgdb"  -a  -n "$2" ] ; then
       GDB_PORT="$2"
    elif [ "$1" = "attach"  -a  -n "$2" ] ; then
@@ -68,10 +67,12 @@ if [ "$1" != "core" ] ; then
          fi
          echo "Found $ATTACH_TARGET PID: $B2G_PID"
       fi
-      GDB_PORT=$((10000 + ($B2G_PID + $(id -u)) % 50000))
+      PROCESS_PORT=$((10000 + ($B2G_PID + $(id -u)) % 50000))
+      GDB_PORT=${GDB_PORT:-$PROCESS_PORT}
       # cmdline is null separated
       B2G_BIN=$($ADB shell cat /proc/$B2G_PID/cmdline | tr '\0' '\n' | head -1)
    else
+      GDB_PORT=$((10000 + $(id -u) % 50000))
       B2G_PID=$(get_pid_by_name b2g)
    fi
 
