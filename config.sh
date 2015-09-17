@@ -176,34 +176,19 @@ case "$1" in
 	repo_sync $1
 	;;
 
-"leo-kk"|"leo-l")
+"leo-kk")
 	echo PRODUCT_NAME=leo >> .tmp-config &&
 	repo_sync $1
 	;;
 
-"aries"|"aries-l")
+"aries")
 	echo PRODUCT_NAME=aries >> .tmp-config &&
 	repo_sync $1
 	;;
 
-"scorpion-l")
-	echo PRODUCT_NAME=scorpion >> .tmp-config &&
-	repo_sync $1
-	;;
-
-"sirius-l")
-	echo PRODUCT_NAME=sirius >> .tmp-config &&
-	repo_sync $1
-	;;
-
-"tianchi-l")
-	echo PRODUCT_NAME=tianchi >> .tmp-config &&
-	repo_sync $1
-	;;
-
-"flamingo-l")
-	echo PRODUCT_NAME=flamingo >> .tmp-config &&
-	repo_sync $1
+"leo-l"|"aries-l"|"scorpion-l"|"sirius-l"|"tianchi-l"|"flamingo-l")
+	echo PRODUCT_NAME=$1 | sed 's/..$//' >> .tmp-config &&
+	repo_sync sony-aosp-l
 	;;
 
 *)
