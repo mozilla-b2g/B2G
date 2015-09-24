@@ -340,6 +340,7 @@ check_xcode() {
       osx_108_sdk=$xcode_dev_path/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.8.sdk
       osx_109_sdk=$xcode_dev_path/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.9.sdk
       osx_1010_sdk=$xcode_dev_path/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.10.sdk
+      osx_1011_sdk=$xcode_dev_path/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.11.sdk
     fi
 
     if [[ $osx_version =~ 10\.[6-8] ]]; then
@@ -373,8 +374,10 @@ check_xcode() {
       osx_sdk=$osx_109_sdk
     elif [ -d "$osx_1010_sdk" ]; then
       osx_sdk=$osx_1010_sdk
+    elif [ -d "$osx_1011_sdk" ]; then
+      osx_sdk=$osx_1011_sdk
     fi
-    
+
     # Peel the OS X SDK version out of the path so we don't have to mess with it
     # by hand; courtesy Geoff Weiss
     if [[ $osx_sdk =~ MacOSX([0-9]+\.[0-9]+)\.sdk ]]; then
