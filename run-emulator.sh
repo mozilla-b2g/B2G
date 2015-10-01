@@ -18,6 +18,27 @@ if [ x"$GDBSERVER" != x"" ]; then
     TAIL_ARGS="$TAIL_ARGS -s -S"
 fi
 
+dns_servers=""
+if [ x"$B2G_DNS_SERVER" != x"" ]; then
+    dns_servers=$B2G_DNS_SERVER
+fi
+
+# DNS servers from command line arg override ones from environment variable.
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --dns-server)
+            shift; dns_servers=$1 ;;
+        *)
+            break ;;
+    esac
+    shift
+done
+
+emu_extra_args=""
+if [ -n "$dns_servers" ]; then
+    emu_extra_args="$emu_extra_args -dns-server $dns_servers"
+fi
+
 if [ "$DEVICE" = "generic_x86" ]; then
     EMULATOR=$TOOLS_PATH/emulator-x86
     KERNEL=$B2G_HOME/prebuilts/qemu-kernel/x86/kernel-qemu
@@ -49,4 +70,5 @@ ${DBG_CMD} $EMULATOR \
    -verbose \
    -gpu on \
    -camera-back webcam0 \
+   $emu_extra_args \
    -qemu $TAIL_ARGS
