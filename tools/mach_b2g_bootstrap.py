@@ -12,7 +12,7 @@ import subprocess
 import sys
 import tempfile
 import time
-
+import urlparse
 
 STATE_DIR_FIRST_RUN = '''
 mach and the build system store shared state in a common directory on the
@@ -104,30 +104,56 @@ CATEGORIES = {
     }
 }
 
-def _find_xulrunner_sdk(gaia_dir):
-    # Try to use the print-xulrunner-sdk target first, if it fails,
-    # then do some lucky guess
-    try:
-        cmd = ['make', '-s', '-C', gaia_dir, 'print-xulrunner-sdk']
-        sdk = subprocess.check_output(cmd).decode('utf-8').strip()
-        return os.path.join(gaia_dir, sdk)
-    except subprocess.CalledProcessError:
-        pass
+def download_b2g_sdk(b2g_sdk):
+    system = platform.system()
+    if system == "Linux":
+        url = "https://queue.taskcluster.net/v1/task/YamDhuDgTWa_kWXcSedDHA/artifacts/public/build/target.linux-x86_64.tar.bz2"
+    elif system == "Darwin":
+        url = "http://ftp.mozilla.org/pub/mozilla.org/b2g/nightly/2015/09/2015-09-02-03-02-03-mozilla-central/b2g-43.0a1.en-US.mac64.dmg"
+    elif system == "Windows":
+        url = "http://ftp.mozilla.org/pub/mozilla.org/b2g/nightly/2015/09/2015-09-02-03-02-03-mozilla-central/b2g-43.0a1.en-US.win32.zip"
+    else:
+        raise Exception('Unable to download b2g_sdk for %s' % system)
 
-    # TODO: We still rely on this heuristic for gaia version that do not
-    # have the print-xulrunner-sdk target. Once no more branch are like this,
-    # this can be dropped.
-    xulrunner_sdks = [d for d in os.listdir(gaia_dir)
-                      if d.startswith('xulrunner-sdk')]
-    if not xulrunner_sdks:
-        raise Exception("Could not find a copy of the xulrunner-sdk. " + \
-                        "Run 'make' in your gaia profile")
+    if not os.path.isdir(b2g_sdk):
+        os.mkdir(b2g_sdk)
 
-    # Use the most recent xulrunner sdk found
-    sdk = sorted(xulrunner_sdks,
-                 key=lambda x: int(x[len(x.rstrip('0123456789')):] or 0),
-                 reverse=True)[0]
-    return os.path.join(gaia_dir, sdk)
+    b2g_path = os.path.join(b2g_sdk, "b2g")
+    if not os.path.isdir(b2g_path):
+        file_path = os.path.join(b2g_sdk, os.path.basename(urlparse.urlparse(url).path))
+
+        import requests
+
+        with open(file_path, "wb") as b2g:
+            print("Downloading %s" % url)
+            response = requests.get(url, stream=True)
+            total_length = response.headers.get("content-length")
+
+            if total_length is None: # no content length header
+                b2g.write(response.content)
+            else:
+                download_length = 0
+                total_length = int(total_length)
+                for data in response.iter_content(8192):
+                    download_length += len(data)
+                    b2g.write(data)
+                    print("\r%10d / %10d [%3.2f%%]" %
+                            (download_length,
+                            total_length,
+                            download_length * 100. / total_length),
+                            end = "")
+            b2g.close()
+
+        print()
+        print("Extract %s..." % file_path)
+
+        import mozinstall
+        mozinstall.install(file_path, os.path.join(b2g_sdk))
+
+        if system == "Darwin":
+            os.symlink(os.path.join(b2g_sdk, "B2G.app", "Contents", "MacOS"), b2g_path)
+
+    return b2g_path
 
 def bootstrap(b2g_home):
     # Ensure we are running Python 2.7+. We put this check here so we generate a
@@ -241,10 +267,7 @@ def bootstrap(b2g_home):
     os.environ['MOZCONFIG'] = os.path.join(b2g_home, 'gonk-misc',
                                            'default-gecko-config')
 
-    xre_path = None
-    gaia_dir = os.path.join(b2g_home, 'gaia')
-    if os.path.isdir(gaia_dir):
-        xre_path = os.path.join(_find_xulrunner_sdk(gaia_dir), 'b2g')
+    xre_path = download_b2g_sdk(os.path.join(os.getcwd(), "b2g_sdk"))
 
     def get_build_var(name):
         env = os.environ.copy()
