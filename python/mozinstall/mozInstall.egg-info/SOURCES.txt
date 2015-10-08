@@ -1,0 +1,10 @@
+setup.py
+mozInstall.egg-info/PKG-INFO
+mozInstall.egg-info/SOURCES.txt
+mozInstall.egg-info/dependency_links.txt
+mozInstall.egg-info/entry_points.txt
+mozInstall.egg-info/not-zip-safe
+mozInstall.egg-info/requires.txt
+mozInstall.egg-info/top_level.txt
+mozinstall/__init__.py
+mozinstall/mozinstall.py
