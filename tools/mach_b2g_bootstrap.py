@@ -54,9 +54,7 @@ Boot2Gecko/Builds.
 '''.lstrip()
 
 # TODO Bug 794506 Integrate with the in-tree virtualenv configuration.
-SEARCH_PATHS = [
-    'python/mozinstall'
-]
+SEARCH_PATHS = []
 
 # Individual files providing mach commands.
 MACH_MODULES = [

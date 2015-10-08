@@ -1,8 +1,0 @@
-
-      # -*- Entry points: -*-
-      [console_scripts]
-      mozinstall = mozinstall:install_cli
-      mozuninstall = mozinstall:uninstall_cli
-      moz_add_to_system = mozinstall:install_cli
-      moz_remove_from_system = mozinstall:uninstall_cli
-      
