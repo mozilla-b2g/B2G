@@ -1072,10 +1072,14 @@ class FlashFotaBuilder(object):
         # Device-specific files that we need to cleanup
         # Should be specified as a space-separated list of files in
         # the env variable FOTA_DEVICE_DATA_FILES
-        deviceCleanup = filter(lambda x: len(x) > 0, os.environ.get("FOTA_DEVICE_DATA_FILES").split(" "))
+        if not os.environ.has_key("FOTA_DEVICE_DATA_FILES"):
+            return
 
-        if len(deviceCleanup) < 1:
-	    return
+        files = os.environ.get("FOTA_DEVICE_DATA_FILES")
+        if len(files) < 1:
+            return
+
+        deviceCleanup = filter(lambda x: len(x) > 0, files.split(" "))
 
         # sdcard will already be mounted anyway
         self.AssertMountIfNeeded("/data")
