@@ -1,2 +1,0 @@
-mozinfo >= 0.7
-mozfile >= 1.0
