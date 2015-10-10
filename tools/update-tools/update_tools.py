@@ -1258,12 +1258,18 @@ class FlashFotaBuilder(object):
         cmd = ('set_progress(0.25);')
         self.generator.script.append(self.generator._WordWrap(cmd))
 
+        # We need /system for reading props from build.prop
+        self.AssertMountIfNeeded("/system")
+
         # We do not want to check the device/model when we are checking fingerprints.
         if self.fota_check_device_name and not self.fota_check_fingerprints:
             self.AssertDeviceOrModel(self.fota_check_device_name)
         else:
             if self.fota_check_fingerprints:
                 self.AssertFingerprints()
+
+        # We do not need that anymore for now, let's unmount
+        self.Umount("/system")
 
         # This method is responsible for checking the partitions we want to format
         self.FormatAll()
