@@ -35,7 +35,7 @@ BRANCH=${BRANCH:-master}
 
 while [ $# -ge 1 ]; do
 	case $1 in
-	-d|-l|-f|-n|-c|-q|-j*)
+	-d|-l|-f|-n|-c|-q|--force-sync|-j*)
 		sync_flags="$sync_flags $1"
 		if [ $1 = "-j" ]; then
 			shift
@@ -192,7 +192,7 @@ case "$1" in
 	;;
 
 *)
-	echo "Usage: $0 [-cdflnq] (device name)"
+	echo "Usage: $0 [-cdflnq] [-j <jobs>] [--force-sync] (device name)"
 	echo "Flags are passed through to |./repo sync|."
 	echo
 	echo Valid devices to configure are:
