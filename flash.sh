@@ -49,18 +49,21 @@ update_time()
 
 fastboot_flash_image()
 {
-	# $1 = {userdata,boot,system}
-	PARTITION=$1
-	if [ "$DEVICE" == "flatfish" ] && [ "$PARTITION" == "userdata" ]; then
-		PARTITION="data"
+	# $1 = {userdata,boot,system,recovery} the image filename
+	# $2 = {userdata,boot,system,recovery} the fastboot partition target
+	#    if non specified, then $2 = $1
+	PARTITION_FILE=$1
+	PARTITION_NAME=$2
+
+	if [ -z "${PARTITION_NAME}" ]; then
+		PARTITION_NAME=${PARTITION_FILE}
 	fi
-	if [ "$PARTITION" == "recovery" ]; then
-		if [ "$DEVICE" == "aries" ] || [ "$DEVICE" == "leo" ] || [ "$DEVICE" == "scorpion" ] || [ "$DEVICE" == "sirius" ] || [ "$DEVICE" == "tianchi" ] || [ "$DEVICE" == "flamingo" ]; then
-			PARTITION="FOTAKernel"
-		fi
+
+	if [ "$DEVICE" == "flatfish" ] && [ "${PARTITION_NAME}" == "userdata" ]; then
+		PARTITION_NAME="data"
 	fi
-	imgpath="out/target/product/$DEVICE/$1.img"
-	out="$(run_fastboot flash "$PARTITION" "$imgpath" 2>&1)"
+	imgpath="out/target/product/$DEVICE/${PARTITION_FILE}.img"
+	out="$(run_fastboot flash "${PARTITION_NAME}" "$imgpath" 2>&1)"
 	rv="$?"
 	echo "$out"
 
@@ -153,9 +156,11 @@ flash_fastboot()
 				return $?
 			fi
 		fi
-		if [ "$DEVICE" == "aries" ] || [ "$DEVICE" == "leo" ] || [ "$DEVICE" == "scorpion" ] || [ "$DEVICE" == "sirius" ] || [ "$DEVICE" == "tianchi" ] || [ "$DEVICE" == "flamingo" ]; then
-			fastboot_flash_image recovery
-		fi
+		case ${DEVICE} in
+		"aries"|"leo"|"scorpion"|"sirius"|"tianchi"|"flamingo")
+			fastboot_flash_image recovery FOTAKernel
+			;;
+		esac
 		fastboot_flash_image userdata &&
 		fastboot_flash_image_if_exists cache &&
 		fastboot_flash_image_if_exists boot &&
