@@ -341,6 +341,8 @@ done
 
 case "$PROJECT" in
 "shallow")
+	resp=`run_adb root` || exit $?
+	[ "$resp" != "adbd is already running as root" ] && run_adb wait-for-device
 	run_adb shell stop b2g &&
 	run_adb remount &&
 	flash_gecko &&
