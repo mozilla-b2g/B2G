@@ -186,7 +186,7 @@ case "$1" in
 	repo_sync $1
 	;;
 
-"leo-l"|"aries-l"|"scorpion-l"|"sirius-l"|"tianchi-l"|"flamingo-l")
+"leo-l"|"aries-l"|"scorpion-l"|"sirius-l"|"tianchi-l"|"flamingo-l"|"eagle-l")
 	echo PRODUCT_NAME=$1 | sed 's/..$//' >> .tmp-config &&
 	repo_sync sony-aosp-l
 	;;
@@ -239,6 +239,7 @@ case "$1" in
 	echo - sirius-l "(Z2 L)"
 	echo - tianchi-l "(T2U L)"
 	echo - flamingo-l "(E3 L)"
+	echo - eagle-l "(M2 L)"
 	exit -1
 	;;
 esac
