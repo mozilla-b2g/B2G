@@ -105,6 +105,12 @@ case "$1" in
 	repo_sync nexus-5-l
 	;;
 
+"nexus-6-l")
+	echo DEVICE=shamu >> .tmp-config &&
+	echo PRODUCT_NAME=aosp_shamu >> .tmp-config &&
+	repo_sync nexus-6-l
+	;;
+
 "nexus-s")
 	echo DEVICE=crespo >> .tmp-config &&
 	repo_sync $1
@@ -202,6 +208,7 @@ case "$1" in
 	echo - nexus-4-kk
 	echo - nexus-5
 	echo - nexus-5-l
+	echo - nexus-6-l
 	echo - nexus-s
 	echo - nexus-s-4g
 	echo - flo "(Nexus 7 2013)"
