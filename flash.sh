@@ -157,7 +157,7 @@ flash_fastboot()
 			fi
 		fi
 		case ${DEVICE} in
-		"aries"|"leo"|"scorpion"|"sirius"|"honami"|"amami"|"tianchi"|"flamingo"|"eagle")
+		"aries"|"leo"|"scorpion"|"sirius"|"honami"|"amami"|"tianchi"|"flamingo"|"eagle"|"seagull")
 			fastboot_flash_image recovery FOTAKernel
 			;;
 		esac
@@ -398,7 +398,7 @@ case "$DEVICE" in
 	exit $?
 	;;
 
-"flame"|"otoro"|"unagi"|"keon"|"peak"|"inari"|"wasabi"|"flatfish"|"aries"|"leo"|"scorpion"|"sirius"|"honami"|"amami"|"tianchi"|"flamingo"|"eagle"|"scx15_sp7715"*)
+"flame"|"otoro"|"unagi"|"keon"|"peak"|"inari"|"wasabi"|"flatfish"|"aries"|"leo"|"scorpion"|"sirius"|"honami"|"amami"|"tianchi"|"flamingo"|"eagle"|"seagull"|"scx15_sp7715"*)
 	flash_fastboot nounlock $PROJECT
 	;;
 
