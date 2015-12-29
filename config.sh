@@ -192,6 +192,11 @@ case "$1" in
 	repo_sync $1
 	;;
 
+"fairphone2")
+	echo PRODUCT_NAME=FP2 >> .tmp-config &&
+	repo_sync $1
+	;;
+
 "leo-l"|"aries-l"|"scorpion-l"|"sirius-l"|"honami-l"|"amami-l"|"tianchi-l"|"flamingo-l"|"eagle-l"|"seagull-l")
 	echo PRODUCT_NAME=$1 | sed 's/..$//' >> .tmp-config &&
 	repo_sync sony-aosp-l
@@ -224,6 +229,7 @@ case "$1" in
 	echo - dolphin-512
 	echo - pandaboard
 	echo - vixen
+	echo - fairphone2
 	echo - flatfish
 	echo - flame
 	echo - flame-kk
