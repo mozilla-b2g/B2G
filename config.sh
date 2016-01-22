@@ -187,7 +187,8 @@ case "$1" in
 	repo_sync $1
 	;;
 
-"aries")
+# We need aries-l with repo_sync $1 for using manifest symlink for releng stuff
+"aries"|"aries-l")
 	echo PRODUCT_NAME=aries >> .tmp-config &&
 	repo_sync $1
 	;;
@@ -197,7 +198,7 @@ case "$1" in
 	repo_sync $1
 	;;
 
-"leo-l"|"aries-l"|"scorpion-l"|"sirius-l"|"honami-l"|"amami-l"|"tianchi-l"|"flamingo-l"|"eagle-l"|"seagull-l")
+"leo-l"|"scorpion-l"|"sirius-l"|"honami-l"|"amami-l"|"tianchi-l"|"flamingo-l"|"eagle-l"|"seagull-l")
 	echo PRODUCT_NAME=$1 | sed 's/..$//' >> .tmp-config &&
 	repo_sync sony-aosp-l
 	;;
