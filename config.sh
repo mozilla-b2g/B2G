@@ -111,6 +111,12 @@ case "$1" in
 	repo_sync nexus-6-l
 	;;
 
+"nexusplayer-l")
+	echo DEVICE=fugu >> .tmp-config &&
+	echo PRODUCT_NAME=aosp_fugu >> .tmp-config &&
+	repo_sync nexusplayer-l
+	;;
+
 "nexus-s")
 	echo DEVICE=crespo >> .tmp-config &&
 	repo_sync $1
@@ -215,6 +221,7 @@ case "$1" in
 	echo - nexus-5
 	echo - nexus-5-l
 	echo - nexus-6-l
+	echo - nexusplayer-l
 	echo - nexus-s
 	echo - nexus-s-4g
 	echo - flo "(Nexus 7 2013)"
