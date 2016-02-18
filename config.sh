@@ -188,6 +188,11 @@ case "$1" in
 	repo_sync $1
 	;;
 
+"rpi2b-l")
+	echo PRODUCT_NAME=rpi2b >> .tmp-config &&
+	repo_sync $1
+	;;
+
 "leo-kk")
 	echo PRODUCT_NAME=leo >> .tmp-config &&
 	repo_sync $1
@@ -242,7 +247,9 @@ case "$1" in
 	echo - flame
 	echo - flame-kk
 	echo - flame-l
+	echo - "> Raspberry Pi boards"
 	echo - rpi "(Revision B)"
+	echo - rpi2b-l
 	echo - emulator
 	echo - emulator-jb
 	echo - emulator-kk
