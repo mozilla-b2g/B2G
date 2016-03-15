@@ -41,6 +41,10 @@ case $DEVICE in
         TARGET_ARCH=x86
         TARGET_TRIPLE=i686-linux-android
         ;;
+    fugu)
+        TARGET_ARCH=x86
+        TARGET_TRIPLE=x86_64-linux-android
+        ;;
     *)
         TARGET_ARCH=arm
         TARGET_TRIPLE=arm-linux-androideabi
