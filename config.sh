@@ -209,7 +209,7 @@ case "$1" in
 	repo_sync $1
 	;;
 
-"leo-l"|"scorpion-l"|"sirius-l"|"honami-l"|"amami-l"|"tianchi-l"|"flamingo-l"|"eagle-l"|"seagull-l")
+"leo-l"|"scorpion-l"|"sirius-l"|"castor-l"|"castor_windy-l"|"honami-l"|"amami-l"|"tianchi-l"|"flamingo-l"|"eagle-l"|"seagull-l")
 	echo PRODUCT_NAME=$1 | sed 's/..$//' >> .tmp-config &&
 	repo_sync sony-aosp-l
 	;;
@@ -265,6 +265,8 @@ case "$1" in
 	echo - leo-l "(Z3 L)"
 	echo - scorpion-l "(Z3 Tablet Compact L)"
 	echo - sirius-l "(Z2 L)"
+	echo - castor-l "(Z2 L Tablet LTE/WiFi)"
+	echo - castor_windy-l "(Z2 L Tablet WiFi only)"
 	echo - honami-l "(Z1 L)"
 	echo - amami-l "(Z1 Compact L)"
 	echo - tianchi-l "(T2U L)"
