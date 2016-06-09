@@ -214,6 +214,16 @@ case "$1" in
 	repo_sync sony-aosp-l
 	;;
 
+"project-tablet")
+	echo PRODUCT_NAME=castor_windy-l >> .tmp-config &&
+	repo_sync project-tablet
+	;;
+
+"project-tablet-lte")
+	echo PRODUCT_NAME=castor-l >> .tmp-config &&
+	repo_sync project-tablet
+	;;
+
 *)
 	echo "Usage: $0 [-cdflnq] [-j <jobs>] [--force-sync] (device name)"
 	echo "Flags are passed through to |./repo sync|."
