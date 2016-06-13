@@ -45,6 +45,15 @@ update_time()
 	run_adb shell "toolbox date $(date +%s) ||
 	               toolbox date -s $(date +%Y%m%d.%H%M%S)" &&
 	run_adb shell setprop persist.sys.timezone $TIMEZONE
+
+	has_timekeep=$(run_adb shell ls /system/bin/timekeep | tr -d '\r\n')
+	if [ "${has_timekeep}" = "/system/bin/timekeep" ]; then
+	        cur_date=$(date +%s)
+	        since_epoch=$(run_adb shell cat /sys/class/rtc/rtc0/since_epoch | tr -d '\r\n')
+		timeadjust=$(echo "${cur_date}-${since_epoch}" | bc)
+		run_adb shell setprop persist.sys.timeadjust ${timeadjust}
+		run_adb shell timekeep restore
+	fi;
 }
 
 fastboot_flash_image()
