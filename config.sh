@@ -215,12 +215,12 @@ case "$1" in
 	;;
 
 "project-tablet")
-	echo PRODUCT_NAME=castor_windy-l >> .tmp-config &&
+	echo PRODUCT_NAME=castor_windy >> .tmp-config &&
 	repo_sync project-tablet
 	;;
 
 "project-tablet-lte")
-	echo PRODUCT_NAME=castor-l >> .tmp-config &&
+	echo PRODUCT_NAME=castor >> .tmp-config &&
 	repo_sync project-tablet
 	;;
 
