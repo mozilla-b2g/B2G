@@ -31,3 +31,15 @@ Discuss with Developers:
 4. Build: `./build.sh`
 5. Run the emulator: `source build/envsetup.sh && lunch aosp_arm-userdebug && emulator -writable-system -selinux permissive`
 
+# Re-building your own NDK
+
+Because it's using a different c++ namespace than the AOSP base, we can't use the prebuilt NDK from Google. If you can't use the one built by KaiOS, here are the steps to build your own:
+1. Download the ndk source:
+`repo init -u https://android.googlesource.com/platform/manifest -b ndk-release-r20`
+2. change `__ndk` to `__` in `external/libcxx/include/__config`:
+```diff
+-#define _LIBCPP_NAMESPACE _LIBCPP_CONCAT(__ndk,_LIBCPP_ABI_VERSION)
++#define _LIBCPP_NAMESPACE _LIBCPP_CONCAT(__,_LIBCPP_ABI_VERSION)
+```
+3. Build the ndk:
+`python ndk/checkbuild.py --no-build-tests`
