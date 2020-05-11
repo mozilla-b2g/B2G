@@ -75,9 +75,16 @@ echo GECKO_OBJDIR=$PWD/objdir-gecko >> .tmp-config
 echo DEVICE_NAME=$1 >> .tmp-config
 
 case "$1" in
-"emulator-10")
+"emulator-10-arm")
 	echo PRODUCT_NAME=aosp_arm >> .tmp-config &&
-	repo_sync $1
+        echo TARGET_NAME=generic >> .tmp-config &&
+	repo_sync emulator-10
+	;;
+"emulator-10-x86_64")
+	echo PRODUCT_NAME=aosp_x86_64 >> .tmp-config &&
+        echo TARGET_NAME=generic_x86_64 >> .tmp-config &&
+	echo BINSUFFIX=64 >> .tmp-config &&
+	repo_sync emulator-10
 	;;
 *)
 	echo "Usage: $0 [-cdflnq] [-j <jobs>] [--force-sync] (device name)"
