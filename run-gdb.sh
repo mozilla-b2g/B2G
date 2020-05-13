@@ -2,14 +2,18 @@
 #set -x
 
 get_pid_by_name() {
-    echo $($ADB shell "toolbox ps '$1' | (read header; read user pid rest; echo -n \$pid)")
+    pid=$($ADB shell "ps | grep '$1' | cut -b 14-19 | tr -d ' '")
+    if [ -n "$pid" ]; then
+        pid=$($ADB shell "ps -A | grep '$1' | cut -b 14-19 | tr -d ' '")
+    fi
+    echo $pid
 }
 
 SCRIPT_NAME=$(basename $0)
 . load-config.sh
 
 ADB=${ADB:-adb}
-if [ ! -f "`which \"$ADB\"`" ]; then
+if [ ! -f "`which \"$ADB\" 2>/dev/null`" ]; then
 	ADB=out/host/`uname -s | tr "[[:upper:]]" "[[:lower:]]"`-x86/bin/adb
 fi
 echo "ADB Location: " $ADB
@@ -37,34 +41,20 @@ echo "ADB Location: " $ADB
 $ADB start-server
 
 case $DEVICE in
-    generic_x86)
-        TARGET_ARCH=x86
-        TARGET_TRIPLE=i686-linux-android
-        ;;
-    fugu)
-        TARGET_ARCH=x86
-        TARGET_TRIPLE=x86_64-linux-android
+    aosp_x86_64)
+        BINSUFFIX=64
         ;;
     *)
-        TARGET_ARCH=arm
-        TARGET_TRIPLE=arm-linux-androideabi
+        BINSUFFIX=
         ;;
 esac
 
-HOST_OS=$(uname -s | tr "[[:upper:]]" "[[:lower:]]")-x86
+HOST_OS=$(uname -s | tr "[[:upper:]]" "[[:lower:]]")
+HOST_ARCH=$(uname -m | tr "[[:upper:]]" "[[:lower:]]")
 
 if [ -z "${GDB}" ]; then
-   if [ -d prebuilts ]; then
-      GDB=prebuilts/gcc/${HOST_OS}/${TARGET_ARCH}/${TARGET_TRIPLE}-4.8/bin/${TARGET_TRIPLE}-gdb
-      # If new version doesn't exist fallback to old version.
-      [ -f "${GDB}" ] || GDB=prebuilts/gcc/${HOST_OS}/${TARGET_ARCH}/${TARGET_TRIPLE}-4.7/bin/${TARGET_TRIPLE}-gdb
-      [ -f "${GDB}" ] || GDB=prebuilts/gcc/${HOST_OS}/${TARGET_ARCH}/${TARGET_TRIPLE}-4.6/bin/${TARGET_TRIPLE}-gdb
-      PYTHON_DIR=prebuilts/python/${HOST_OS}/2.7.5
-      if [ -d $PYTHON_DIR ]; then
-        export PYTHONHOME=$PYTHON_DIR
-      fi
-   elif [ -d prebuilt ]; then
-      GDB=prebuilt/${HOST_OS}/toolchain/${TARGET_TRIPLE}-4.4.x/bin/${TARGET_TRIPLE}-gdb
+   if [ "${HOME}/.mozbuild/android-ndk-r20b-canary" ]; then
+      GDB="${HOME}/.mozbuild/android-ndk-r20b-canary/prebuilt/${HOST_OS}-${HOST_ARCH}/bin/gdb"
    else
       echo "Not sure where gdb is located. Override using GDB= or fix the script."
       exit 1
@@ -74,11 +64,11 @@ fi
 B2G_BIN=/system/b2g/b2g
 GDBINIT=/tmp/b2g.gdbinit.$(whoami).$$
 
-GONK_OBJDIR=out/target/product/$DEVICE
-SYMDIR=$GONK_OBJDIR/symbols
+GONK_OBJDIR="out/target/product/$TARGET_NAME"
+SYMDIR="$GONK_OBJDIR/symbols"
 
 if [ "$1" != "core" ] ; then
-   GDBSERVER_PID=$(get_pid_by_name gdbserver)
+   GDBSERVER_PID=$(get_pid_by_name gdbserver$BINSUFFIX)
 
    if [ "$1" = "vgdb"  -a  -n "$2" ] ; then
       GDB_PORT="$2"
@@ -119,7 +109,7 @@ if [ "$1" = "attach" ]; then
       exit 1
    fi
 
-   $ADB shell "gdbserver :$GDB_PORT --attach $B2G_PID" &
+   $ADB shell "gdbserver$BINSUFFIX :$GDB_PORT --attach $B2G_PID" &
 elif [ "$1" == "core" ]; then
    if [ -z "$3" ]; then
      CORE_FILE=$2
@@ -158,13 +148,13 @@ elif [ "$1" != "vgdb" ]; then
      ld_preload_extra="/system/b2g/libdmd.so"
   fi
 
-   $ADB shell "DMD=$dmd LD_LIBRARY_PATH=/system/b2g LD_PRELOAD=\"$ld_preload_extra /system/b2g/libmozglue.so\" TMPDIR=/data/local/tmp $GDBSERVER_ENV gdbserver --multi :$GDB_PORT $B2G_BIN $@" &
+   $ADB shell "DMD=$dmd LD_LIBRARY_PATH=\"/system/b2g:/apex/com.android.runtime/lib$BINSUFFIX:/system/apex/com.android.runtime.debug/lib$BINSUFFIX\" LD_PRELOAD=\"$ld_preload_extra /system/b2g/libmozglue.so /system/b2g/libmozsandbox.so\" TMPDIR=/data/local/tmp $GDBSERVER_ENV gdbserver$BINSUFFIX --multi :$GDB_PORT $B2G_BIN $@" &
 fi
 
 sleep 1
-echo "set solib-absolute-prefix $SYMDIR" > $GDBINIT
 echo "handle SIGPIPE nostop" >> $GDBINIT
-echo "set solib-search-path $GECKO_OBJDIR/dist/bin:$SYMDIR/system/lib:$SYMDIR/system/lib/hw:$SYMDIR/system/lib/egl:$SYMDIR/system/bin:$GONK_OBJDIR/system/lib:$GONK_OBJDIR/system/lib/egl:$GONK_OBJDIR/system/lib/hw:$GONK_OBJDIR/system/vendor/lib:$GONK_OBJDIR/system/vendor/lib/hw:$GONK_OBJDIR/system/vendor/lib/egl" >> $GDBINIT
+echo "set solib-absolute-prefix $SYMDIR" > $GDBINIT
+echo "set solib-search-path $GECKO_OBJDIR/dist/bin:$SYMDIR:$SYMDIR/apex/com.android.runtime.debug/bin:$SYMDIR/apex/com.android.runtime.debug/lib:$SYMDIR/apex/com.android.runtime.debug/lib$BINSUFFIX:$SYMDIR/apex/com.android.runtime.debug/lib$BINSUFFIX/bionic" >> $GDBINIT
 if [ "$1" == "vgdb" ] ; then
   echo "target remote :$GDB_PORT" >> $GDBINIT
 elif [ "$1" != "core" ]; then
