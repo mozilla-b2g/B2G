@@ -91,7 +91,8 @@ case "$1" in
 	echo "Flags are passed through to |./repo sync|."
 	echo
 	echo Valid devices to configure are:
-	echo - emulator-10
+	echo - emulator-10-arm
+	echo - emulator-10-x86_64
 	exit -1
 	;;
 esac
