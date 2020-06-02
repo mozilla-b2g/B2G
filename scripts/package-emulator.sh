@@ -33,13 +33,15 @@ EMULATOR_FILES=(\
        ${PRODUCT_OUT}/system-qemu.img \
        ${PRODUCT_OUT}/userdata.img)
 
-EMULATOR_ARCHIVE="${OUT_DIR}/emulator.tar.gz"
+DEFAULT_EMULATOR_ARCHIVE="${OUT_DIR}/emulator.tar.zst"
+EMULATOR_ARCHIVE="${1:-$DEFAULT_EMULATOR_ARCHIVE}"
+COMPRESSOR="${2:-zstd}"
 
 echo "Creating emulator archive at ${EMULATOR_ARCHIVE}"
 
 # Create a file structure needed by mach.
-rm -f $EMULATOR_ARCHIVE
-tar -cvzf $EMULATOR_ARCHIVE --transform "\
+rm -f "${EMULATOR_ARCHIVE}"
+tar -c --transform "\
 s,^${PRODUCT_OUT}/system/,avd/${AVD_DIR_NAME}/,S;\
 s,^${PRODUCT_OUT}/,avd/${AVD_DIR_NAME}/,S;\
-s,^${OUT_TEMP_DIR}/,avd/,S" --show-transformed-names ${EMULATOR_FILES[@]}
+s,^${OUT_TEMP_DIR}/,avd/,S" --show-transformed-names ${EMULATOR_FILES[@]} | "${COMPRESSOR}" > "${EMULATOR_ARCHIVE}"
